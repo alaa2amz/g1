@@ -1,5 +1,0 @@
-screen -t coding vi main.go
-screen -t server go run .
-screen -t curl
-screen -t db sqlite3 db.sqlite
-screen -t doc

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alaa2amz/g1/mw"
 	"github.com/alaa2amz/g1/service"
 	"github.com/alaa2amz/g1/service/tag"
 
@@ -117,7 +118,7 @@ func Register(r *gin.Engine) *gin.Engine {
 		// ed -> edit form or json by id
 		// jg -> join generic other resoursec
 		r.POST(fullPath, cr)
-		r.GET(fullPath, rt)
+		r.GET(fullPath, mw.KissAuth,rt)
 		r.GET(fullPath+"/:id", gt)
 		r.PUT(fullPath+"/:id", up)
 		r.DELETE(fullPath+"/:id", dl)
@@ -128,6 +129,8 @@ func Register(r *gin.Engine) *gin.Engine {
 	}
 	return r
 }
+
+
 
 // TODO: c.send(reply)
 func send(r *Reply, c *gin.Context) {
@@ -151,7 +154,7 @@ func parseQueryString(qs map[string][]string) []QueryTerm {
 		for _, value := range values {
 			term := QueryTerm{}
 			term.Column = key
-			vals := strings.Split(value, "__")
+			vals := strings.Split(value, "~")
 			if len(vals) == 1 {
 				term.Values = append(term.Values, vals[0])
 				term.Relation = "="
@@ -162,8 +165,17 @@ func parseQueryString(qs map[string][]string) []QueryTerm {
 				term.Or = true
 				vals[0] = vals[0][2:]
 			}
-			term.Relation = relations[vals[0]]
+			if v,ok := relations[vals[0]];ok{
+				term.Relation=v
 			term.Values = append(term.Values, vals[1:]...)
+		}else{
+			term.Relation = "="
+		}
+		switch vals[0] {
+		case "co":
+			term.Values[0]="%"+term.Values[0]+"%"
+		default:
+		}
 			terms = append(terms, term)
 		}
 	}
@@ -203,17 +215,20 @@ func cr(c *gin.Context) {
 }
 
 func rt(c *gin.Context) {
+	//get query string
 	qs := c.Request.URL.Query()
+	//parse query to term struct slice
 	terms := parseQueryString(qs)
+	//debug
 	log.Printf("%+v\n", terms)
-	//p := Proto()
 	ps := Protos()
+	//start session QDB
 	QDB := DB.Session(&gorm.Session{})
 	QDB.Model(&ps)
 	for _, term := range terms {
-		if term.Relation == "LIKE" {
-			term.Values[0] = "%" + term.Values[0] + "%"
-		}
+		//if term.Relation == "LIKE" {
+		//	term.Values[0] = "%" + term.Values[0] + "%"
+		//}
 		queryString := fmt.Sprintf("%s %s ?", term.Column, term.Relation)
 		log.Println(queryString)
 		log.Printf("%T ----%v\n", term.Values, term.Values)
@@ -227,7 +242,8 @@ func rt(c *gin.Context) {
 	}
 	log.Println(QDB.ToSQL(func(q *gorm.DB) *gorm.DB { return q.Find(&ps) }))
 	QDB.Find(&ps)
-	c.JSON(200, gin.H{"data": ps})
+	//c.JSON(200, gin.H{"data": ps})
+	//send(Result{200,
 }
 
 func gt(c *gin.Context) {

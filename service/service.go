@@ -17,7 +17,7 @@ var (
 func init() {
 	fmt.Println("service init")
 	R = gin.Default()
-	DB, dberr = gorm.Open(sqlite.Open("db.sqlite"))
+	DB, dberr = gorm.Open(sqlite.Open("db/db.sqlite"))
 	if dberr != nil {
 		log.Fatal(dberr)
 	}
