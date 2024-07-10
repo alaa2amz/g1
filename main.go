@@ -5,6 +5,7 @@ import (
 
 	"github.com/alaa2amz/g1/service"
 	_ "github.com/alaa2amz/g1/service/post"
+	_ "github.com/alaa2amz/g1/service/user"
 	// "github.com/alaa2amz/g1/service/tag"
 )
 

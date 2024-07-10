@@ -22,4 +22,3 @@ func init() {
 		log.Fatal(dberr)
 	}
 }
-

@@ -6,10 +6,9 @@ import (
 	//"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	//"log"
-	"strconv"
-	"github.com/alaa2amz/g1/service/tag"
 	"github.com/alaa2amz/g1/service/post"
-
+	"github.com/alaa2amz/g1/service/tag"
+	"strconv"
 )
 
 var DB *gorm.DB
@@ -23,15 +22,13 @@ func Init(db *gorm.DB) {
 	DB = db
 }
 
-
 func Register(r *gin.Engine) *gin.Engine {
 	r.GET(Path, rt)
 	r.POST(Path, cr)
-	r.PATCH(Path + "/:id", up)
-	r.DELETE(Path + "/:id", dl)
+	r.PATCH(Path+"/:id", up)
+	r.DELETE(Path+"/:id", dl)
 	return r
 }
-
 
 func cr(c *gin.Context) {
 	var p Tag

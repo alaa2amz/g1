@@ -24,13 +24,12 @@ func Init(db *gorm.DB) {
 	DB.AutoMigrate(&Tag{})
 }
 
-
 func Register(r *gin.Engine) *gin.Engine {
-//	r.GET("/", home)
+	//	r.GET("/", home)
 	r.GET(Path, rt)
 	r.POST(Path, cr)
-	r.PATCH(Path + "/:id", up)
-	r.DELETE(Path + "/:id", dl)
+	r.PATCH(Path+"/:id", up)
+	r.DELETE(Path+"/:id", dl)
 	return r
 }
 
