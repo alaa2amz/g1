@@ -3,7 +3,7 @@
 <body>
 
 <h2>Post</h2>
-<form action="{{.data.path}}/.." method="post">
+<form action="{{.data.path}}/../update" method="post">
 {{range $k,$v := .data.fm}}
   <label for="fname">{{$k}}:</label><br>
   <input type="text" id="{{$k}}" name="{{$k}}" value="{{$v}}"><br>

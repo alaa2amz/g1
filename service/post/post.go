@@ -70,8 +70,8 @@ type Post struct {
 	//TagID    *uint    `form:"tagid"`
 	//Tag      *Tag     `form:"tagname"`
 	//Tag         *Tag       `form:"tag"`
-	PublishAt     *time.Time `form:"publish"`
-//	CreatedAt   time.Time
+	PublishAt     *time.Time `form:"publish" time_format:"2006-01-02"`
+	CreatedAt   time.Time `form:"ca"`
 //	UpdatedAt   time.Time
 //	DeletedAt   time.Time
 	//gorm.Model
@@ -124,7 +124,8 @@ func Register(r *gin.Engine) *gin.Engine {
 		r.GET(fullPath, mw.KissAuth,rt)
 		r.GET(fullPath+"/:id", gt)
 		r.PUT(fullPath+"/:id", up)
-		r.POST(fullPath+"/:id", up)
+		r.POST(fullPath+"/:id/update", up)
+		r.POST(fullPath+"/:id/delete", dl)
 		r.DELETE(fullPath+"/:id", dl)
 
 		//r.GET(fullPath+"/test", tst)
@@ -251,7 +252,7 @@ func rt(c *gin.Context) {
 	}
 	log.Println(QDB.ToSQL(func(q *gorm.DB) *gorm.DB { return q.Find(&ps) }))
 	//result := QDB.Find(&ps)
-	result := QDB.Model(&ps).Find(rm)
+	result := QDB.Model(&ps).Order("id desc").Find(rm)
 //	result := QDB.Find(&ps)
 	//mid,err := json.Marshal(&ps)
 	//json.Unmarshal(mid,rm)
@@ -265,6 +266,7 @@ func rt(c *gin.Context) {
 	}
 	r.StatusCode = 200
 	//frm: filtered/form results map
+	///frm :=[]map[string]any{}
 	frm :=[]map[string]any{}
 	formKeys,err := StructFields(Proto(),"form")
 	if err != nil {
@@ -277,7 +279,9 @@ func rt(c *gin.Context) {
 		}
 		frm=append(frm,amap)
 	}
+	log.Println(frm)
 	//r.Data = gin.H{"frm":frm,"apath":"dgdggd"}
+	//r.Data = gin.H{"frm":frm,"path":c.FullPath()}
 	r.Data = gin.H{"frm":frm,"path":c.FullPath()}
 	r.Template = "results.tmpl"
 	send(r,c)
@@ -299,21 +303,31 @@ func gt(c *gin.Context) {
 	send(r, c)
 
 }
-
+//destructive
 func up(c *gin.Context) {
 	p := Proto()
 	c.Bind(&p)
+	log.Printf("%+v\n%T",p,p.PublishAt)
+	//*p.PublishAt ,_= time.Parse("2004-9-9",p.PublishAt)
 	id := c.Param("id")
 	uintID, err := strconv.ParseUint(id, 10, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
 	p.ID = uint(uintID)
-	DB.Save(&p)
+	result:=DB.Save(&p)
+	if result.Error != nil {
+		panic(result.Error)
+	}
 	//TODO:use send rc
-	c.JSON(200, gin.H{"data": p})
+	c.Set("message","updated")
+	if strings.Contains(c.Request.URL.Path,"/api/") {
+		c.JSON(200, gin.H{"data": p})}else{
+			//c.Redirect(303,c.Request.Header.Get("Referer"))
+			c.Redirect(303,Path)
+		}
 }
-
+//constructive
 func up2(c *gin.Context) {
 	p := Proto()
 	c.Bind(&p)
@@ -324,11 +338,22 @@ func up2(c *gin.Context) {
 
 func dl(c *gin.Context) {
 	p := Proto()
-	c.Bind(&p)
+//	c.Bind(&p)
 	id := c.Param("id")
-	c.Bind(&p)
+//	c.Bind(&p)
 	DB.Delete(&p, id)
-	c.JSON(200, gin.H{"data": p})
+//	c.JSON(200, gin.H{"data": p})
+
+	c.Set("message","deleted")
+	if strings.Contains(c.Request.URL.Path,"/api/") {
+		c.JSON(200, gin.H{"data": p})
+return
+	}else{
+			//c.Redirect(303,c.Request.Header.Get("Referer"))
+			log.Print("zzxzx")
+			c.Redirect(303,Path)
+			return
+}
 }
 func nw(c *gin.Context) {
 	p := Proto()
