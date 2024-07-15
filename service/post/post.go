@@ -6,30 +6,33 @@
 // TODO:generic joiner
 // TODO:edit and new points
 // TODO:validate basic data types on create
+// TODO:intensive error handling and testing
 package post
 
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
-	"reflect"
-	//"encoding/json"
 
 	"github.com/alaa2amz/g1/mw"
 	"github.com/alaa2amz/g1/service"
 	"github.com/alaa2amz/g1/service/tag"
 
+	//	"github.com/mitchellh/mapstructure"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 var (
-	DB           *gorm.DB
-	Path         string = "/g1/post"
-	Editions            = []string{"", "/api"}
-	TemplatePath        = "post/template"
+	DB             *gorm.DB
+	Path           string = "/g1/post"
+	Editions              = []string{"", "/api"}
+	TemplatePath          = "post/template"
+	//TODO:move near model
+	DroppedColumns = []string{"publish_at", "afloat"}
 )
 
 type Reply struct {
@@ -60,24 +63,20 @@ var relations = map[string]string{
 }
 
 type Post struct {
-	ID       uint     `form:"id" gorm:"primaryKey"`//id should be removed from form
-	Title    string   `form:"title" binding:"required"`
-	Descript *string  `form:"descript"`
-	Content  string   `form:"content" gorm:"default:null;not null"`
+	ID    uint   `form:"id" gorm:"primaryKey"` //id should be removed from form
+	Title string `form:"title" binding:"required"`
+	Content string `form:"content" gorm:"default:null;not null"`
 	Abstract *string  `form:"abstract"`
-	Afloat   float64  `form:"afloat"`
 	Rate     *float64 `form:"rate"`
 	//TagID    *uint    `form:"tagid"`
-	//Tag      *Tag     `form:"tagname"`
 	//Tag         *Tag       `form:"tag"`
-	PublishAt     *time.Time `form:"publish" time_format:"2006-01-02"`
-	CreatedAt   time.Time `form:"ca"`
-//	UpdatedAt   time.Time
-//	DeletedAt   time.Time
+	//	PublishAt     *time.Time `form:"publish" time_format:"2006-01-02"`
+	CreatedAt time.Time 
+	UpdatedAt time.Time 
+	DeletedAt   time.Time
 	//gorm.Model
 
 }
-
 type Tag tag.Tag
 
 func Proto() (p Post) { return }
@@ -90,6 +89,9 @@ func init() {
 		log.Fatal("main database not initialized")
 	}
 	DB = service.DB
+	for _, dropColumn := range DroppedColumns {
+		DB.Migrator().DropColumn(Proto(), dropColumn)
+	}
 	DB.AutoMigrate(Proto())
 
 	if service.R == nil {
@@ -121,7 +123,7 @@ func Register(r *gin.Engine) *gin.Engine {
 		// ed -> edit form or json by id
 		// jg -> join generic other resoursec
 		r.POST(fullPath, cr)
-		r.GET(fullPath, mw.KissAuth,rt)
+		r.GET(fullPath, mw.KissAuth, rt)
 		r.GET(fullPath+"/:id", gt)
 		r.PUT(fullPath+"/:id", up)
 		r.POST(fullPath+"/:id/update", up)
@@ -134,8 +136,6 @@ func Register(r *gin.Engine) *gin.Engine {
 	}
 	return r
 }
-
-
 
 // TODO: c.send(reply)
 func send(r *Reply, c *gin.Context) {
@@ -171,17 +171,17 @@ func parseQueryString(qs map[string][]string) []QueryTerm {
 				term.Or = true
 				vals[0] = vals[0][2:]
 			}
-			if v,ok := relations[vals[0]];ok{
-				term.Relation=v
-			term.Values = append(term.Values, vals[1:]...)
-		}else{
-			term.Relation = "="
-		}
-		switch vals[0] {
-		case "co":
-			term.Values[0]="%"+term.Values[0]+"%"
-		default:
-		}
+			if v, ok := relations[vals[0]]; ok {
+				term.Relation = v
+				term.Values = append(term.Values, vals[1:]...)
+			} else {
+				term.Relation = "="
+			}
+			switch vals[0] {
+			case "co":
+				term.Values[0] = "%" + term.Values[0] + "%"
+			default:
+			}
 			terms = append(terms, term)
 		}
 	}
@@ -214,80 +214,59 @@ func cr(c *gin.Context) {
 		send(r, c)
 		return
 	}
-	r.StatusCode = 200
-	r.Data = p
-	send(r, c)
-	return
+	//
+
+	//TODO:use send rc
+	c.Set("message", "updated")
+	if strings.Contains(c.Request.URL.Path, "/api/") {
+		c.JSON(200, gin.H{"data": p})
+		return
+	} else {
+		c.Redirect(303, Path)
+		return
+	}
+
 }
 
+// rt retrieve records C{R}UD
 func rt(c *gin.Context) {
-	//prototypes -> ps
-	ps := Protos()
-	//results map
-	rm := &[]map[string]any{}
-	r := &Reply{}
-	//get query string
-	qs := c.Request.URL.Query()
-	//parse query to term struct slice
+	//TODO:sort columns and rows
+	//TODO:smart sort
+	//TODO:pagination
+	ps := Protos() 		//model {p}rototype{s}
+	rm := []map[string]any{} //{r}esults {m}ap
+	r := &Reply{} 		//response reply
+	qs := c.Request.URL.Query() //query string map
 	terms := parseQueryString(qs)
-	//debug
-	log.Printf("terms: %+v\n", terms)
-	//start session QDB
-	QDB := DB.Session(&gorm.Session{})
+	log.Printf("terms: %+v\n", terms) //debug
+	QDB := DB.Session(&gorm.Session{}) //start session QDB
 	QDB.Model(&ps)
 	for _, term := range terms {
-		//if term.Relation == "LIKE" {
-		//	term.Values[0] = "%" + term.Values[0] + "%"
-		//}
 		queryString := fmt.Sprintf("%s %s ?", term.Column, term.Relation)
-		log.Println(queryString)
-		log.Printf("%T ----%v\n", term.Values, term.Values)
 		if !term.Or {
-			//QDB = QDB.Where(queryString, term.Values[0]).Where("id > ?",100)
 			QDB = QDB.Where(queryString, term.Values[0])
 		} else {
 
 			QDB = QDB.Or(queryString, term.Values[0])
 		}
 	}
-	log.Println(QDB.ToSQL(func(q *gorm.DB) *gorm.DB { return q.Find(&ps) }))
-	//result := QDB.Find(&ps)
-	result := QDB.Model(&ps).Order("id desc").Find(rm)
-//	result := QDB.Find(&ps)
-	//mid,err := json.Marshal(&ps)
-	//json.Unmarshal(mid,rm)
-	//log.Println(err.Error())
+	log.Println(QDB.ToSQL(func(q *gorm.DB) *gorm.DB { return q.Find(&ps) })) //debug
+	result := QDB.Model(&ps).Order("id desc").Find(&rm)
 	if result.Error != nil {
 		r.StatusCode = 500
 		r.Error = result.Error
 		r.Template = "error.tmpl"
-		send(r,c)
+		send(r, c)
 		return
 	}
 	r.StatusCode = 200
-	//frm: filtered/form results map
-	///frm :=[]map[string]any{}
-	frm :=[]map[string]any{}
-	formKeys,err := StructFields(Proto(),"form")
-	if err != nil {
-		log.Fatal(err)
-	}
-	for i,_ := range *rm {
-			amap := map[string]any{}
-		for _,k := range formKeys {
-			amap[k]=(*rm)[i][k]
-		}
-		frm=append(frm,amap)
-	}
-	log.Println(frm)
-	//r.Data = gin.H{"frm":frm,"apath":"dgdggd"}
-	//r.Data = gin.H{"frm":frm,"path":c.FullPath()}
-	r.Data = gin.H{"frm":frm,"path":c.FullPath()}
+	r.Data = gin.H{"rm": rm, "path": c.FullPath()}
 	r.Template = "results.tmpl"
-	send(r,c)
-	
+	send(r, c)
+
 }
 
+// gt get one record by id C{R}UD
 func gt(c *gin.Context) {
 	p := Proto()
 	m := map[string]interface{}{}
@@ -303,118 +282,122 @@ func gt(c *gin.Context) {
 	send(r, c)
 
 }
-//destructive
+
+// up update record CR{U}D 
+// NOTE: destructive, ie unset fields will set to zero value
 func up(c *gin.Context) {
 	p := Proto()
 	c.Bind(&p)
-	log.Printf("%+v\n%T",p,p.PublishAt)
-	//*p.PublishAt ,_= time.Parse("2004-9-9",p.PublishAt)
 	id := c.Param("id")
 	uintID, err := strconv.ParseUint(id, 10, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
 	p.ID = uint(uintID)
-	result:=DB.Save(&p)
+	result := DB.Save(&p)
 	if result.Error != nil {
 		panic(result.Error)
 	}
 	//TODO:use send rc
-	c.Set("message","updated")
-	if strings.Contains(c.Request.URL.Path,"/api/") {
-		c.JSON(200, gin.H{"data": p})}else{
-			//c.Redirect(303,c.Request.Header.Get("Referer"))
-			c.Redirect(303,Path)
-		}
+	c.Set("message", "updated")
+	if strings.Contains(c.Request.URL.Path, "/api/") {
+		c.JSON(200, gin.H{"data": p})
+		return
+	} else {
+		c.Redirect(303, Path)
+		return
+	}
 }
-//constructive
+
+// up2 update record CR{U}D
+// NOTE: constructive ie unset fields will be left unchanged
 func up2(c *gin.Context) {
 	p := Proto()
 	c.Bind(&p)
 	id := c.Param("id")
 	DB.Model(&p).Where("ID=?", id).Updates(&p)
-	c.JSON(200, gin.H{"p": p})
+	//TODO:use send rc
+	c.Set("message", "updated")
+	if strings.Contains(c.Request.URL.Path, "/api/") {
+		c.JSON(200, gin.H{"data": p})
+		return
+	} else {
+		c.Redirect(303, Path)
+		return
+	}
 }
 
+// dl delete record CRU{D}
+// TODO:make another soft delete handler and end point
 func dl(c *gin.Context) {
 	p := Proto()
-//	c.Bind(&p)
 	id := c.Param("id")
-//	c.Bind(&p)
 	DB.Delete(&p, id)
-//	c.JSON(200, gin.H{"data": p})
-
-	c.Set("message","deleted")
-	if strings.Contains(c.Request.URL.Path,"/api/") {
+	c.Set("message", "deleted")
+	if strings.Contains(c.Request.URL.Path, "/api/") {
 		c.JSON(200, gin.H{"data": p})
-return
-	}else{
-			//c.Redirect(303,c.Request.Header.Get("Referer"))
-			log.Print("zzxzx")
-			c.Redirect(303,Path)
-			return
+		return
+	} else {
+		c.Redirect(303, Path)
+		return
+	}
 }
-}
+
+// nw new record form
+// TODO:return empty curl with json data to be filled
 func nw(c *gin.Context) {
 	p := Proto()
 	r := &Reply{}
-	formValues,err := StructFields(p,"form")
+	formValues, err := StructFields(p, "form")
 	if err != nil {
-		r.StatusCode=400
+		r.StatusCode = 400
 		r.Error = err
-		r.Template ="error.tmpl"
-		send(r,c)
+		r.Template = "error.tmpl"
+		send(r, c)
 		return
 	}
 	r.StatusCode = 200
 	r.Data = formValues
 	r.Template = "new.tmpl"
-	//c.JSON(200,formValues)
-	send(r,c)
+	send(r, c)
 	return
 }
-func StructFields(aStruct any,aKey string) ([]string,error) {
-	values := []string{}
-	typ := reflect.TypeOf(aStruct)
-	if typ.Kind() != reflect.Struct {
-		    return nil, fmt.Errorf("%s is not a struct", typ)
-	    }
-	    for i := 0; i < typ.NumField(); i++ {
-		        fld := typ.Field(i)
-			    if val := fld.Tag.Get(aKey); val != "" { 
-				            values = append(values,val)
-					        }
-					}
-					return values, nil}
 
 
+// ed edit record form
+// TODO:return empty curl with json data to be filled
 func ed(c *gin.Context) {
 	p := Proto()
 	r := &Reply{}
-	m := map[string]any{}
-	fm := map[string]any{}
+	m := map[string]any{} //m record {m}ap
 	//TODO:handle errorr
-	id:=c.Param("id")
-	DB.Model(&p).First(&m,id)
-	formValues,err := StructFields(p,"form")
-	if err != nil {
-		r.StatusCode=400
-		r.Error = err
-		r.Template ="error.tmpl"
-		send(r,c)
-		return
-	}
-	for _,k := range formValues {
-		fm[k]=m[k]
-	}
+	id := c.Param("id")
+	DB.Model(&p).First(&m, id)
 	r.StatusCode = 200
-	r.Data = gin.H{"fm":fm,"path":c.Request.URL.EscapedPath(),"id":id}
-	log.Printf("%+v\n",fm)
+	r.Data = gin.H{"m": m, "path": c.Request.URL.EscapedPath(), "id": id}
 	r.Template = "edit.tmpl"
-	//c.JSON(200,formValues)
-	send(r,c)
+	send(r, c)
 	return
 }
+
+// StructFields given struct and key
+// returns fields tags values slice of that key
+func StructFields(aStruct any, aKey string) ([]string, error) {
+	values := []string{}
+	typ := reflect.TypeOf(aStruct)
+	if typ.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("%s is not a struct", typ)
+	}
+	for i := 0; i < typ.NumField(); i++ {
+		fld := typ.Field(i)
+		if val := fld.Tag.Get(aKey); val != "" {
+			values = append(values, val)
+		}
+	}
+	return values, nil
+}
+
+// fragments buffer
 //result := DB.First(&p, id)
 //c.JSON(200, gin.H{"data": p})
 //result := DB.Model(&p).Where("ID = ?", id).First(&m)
