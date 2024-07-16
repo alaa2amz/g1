@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Post</h2>
+<form action="{{.data.path}}/../update" method="post">
+{{range $k,$v := .data.m}}
+  <label for="fname">{{$k}}:</label><br>
+  <input type="text" id="{{$k}}" name="{{$k}}" value="{{$v}}"><br>
+ {{end}}
+  <input type="submit" value="Submit">
+</form> 
+
+
+</body>
+</html>

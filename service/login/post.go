@@ -7,7 +7,7 @@
 // TODO:edit and new points
 // TODO:validate basic data types on create
 // TODO:intensive error handling and testing
-package post
+package login
 
 import (
 	"fmt"
@@ -19,22 +19,22 @@ import (
 
 	"github.com/alaa2amz/g1/mw"
 	"github.com/alaa2amz/g1/service"
-
 	"github.com/alaa2amz/g1/service/tag"
-    "github.com/alaa2amz/g1/service/login"
 
 	//	"github.com/mitchellh/mapstructure"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var (
 	DB             *gorm.DB
-	Path           string = "/g1/post"
+	Path           string = "/g1/login"
 	Editions              = []string{"", "/api"}
-	TemplatePath          = "post/template"
+	TemplatePath          = "login/template"
 	//TODO:move near model
-	DroppedColumns = []string{"publish_at", "afloat"}
+	DroppedColumns  []string
+	 secretKey = []byte("your-secret-key")
 )
 
 type Reply struct {
@@ -64,15 +64,12 @@ var relations = map[string]string{
 	"co": "LIKE",
 }
 
-type Post struct {
+type Login struct {
 	ID    uint   `form:"id" gorm:"primaryKey"` //id should be removed from form
-	Title string `form:"title" binding:"required"`
-	Content string `form:"content" gorm:"default:null;not null"`
-	Abstract *string  `form:"abstract"`
-	Rate     *float64 `form:"rate"`
-	//TagID    *uint    `form:"tagid"`
-	//Tag         *Tag       `form:"tag"`
-	//	PublishAt     *time.Time `form:"publish" time_format:"2006-01-02"`
+	Username string `form:"username" binding:"required"`
+	Password string `form:"password" gorm:"default:null;not null"`
+	Token string `gorm:"default:null;not null"`
+	ExpiredAt     *time.Time `time_format:"2006-01-02"`
 	CreatedAt time.Time 
 	UpdatedAt time.Time 
 	DeletedAt   time.Time
@@ -81,9 +78,9 @@ type Post struct {
 }
 type Tag tag.Tag
 
-func Proto() (p Post) { return }
+func Proto() (p Login) { return }
 
-func Protos() (p []Post) { return }
+func Protos() (p []Login) { return }
 
 func init() {
 	log.Println(Path + "init")
@@ -99,7 +96,6 @@ func init() {
 	if service.R == nil {
 		log.Fatal("main router not initialized")
 	}
-	service.R.Use(login.Auth())
 	service.R = Register(service.R)
 }
 
@@ -111,7 +107,7 @@ func Init() {
 
 // Register
 func Register(r *gin.Engine) *gin.Engine {
-	r.LoadHTMLGlob("**/**/template/*.tmpl")
+	//r.LoadHTMLGlob("**/login/**/*.tmpl")
 
 	for _, edition := range Editions {
 		fullPath := edition + Path
@@ -199,7 +195,6 @@ func tst(c *gin.Context) {
 func cr(c *gin.Context) {
 	r := &Reply{}
 	p := Proto()
-
 	err := c.ShouldBind(&p)
 	if err != nil {
 		r.StatusCode = 400
@@ -208,6 +203,22 @@ func cr(c *gin.Context) {
 		send(r, c)
 		return
 	}
+	/////////////////////////////////////////////////////////////
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": "alaa",                    // Subject (user identifier)
+		"iss": "alaazak",                  // Issuer
+		"aud": "client",           // Audience (user role)
+		"exp": time.Now().Add(time.Second*60*5).Unix(), // Expiration time
+		"iat": time.Now().Unix(),                 // Issued at
+	})
+	fmt.Printf("Token claims added: %+v\n", token)
+	tokenString, errt := token.SignedString(secretKey)
+    	if errt != nil {
+        	panic( errt)
+    	}
+	fmt.Printf("Token claims added: %+v\n", tokenString)
+    	//////////////////////////////////////////////////////////////////////
+	p.Token = tokenString
 
 	result := DB.Create(&p)
 	if result.Error != nil {
@@ -220,12 +231,13 @@ func cr(c *gin.Context) {
 	//
 
 	//TODO:use send rc
-	c.Set("message", "updated")
+	c.Set("message", "logged in")
+	c.SetCookie("token", tokenString, 3600, "/", "localhost", false, true)
 	if strings.Contains(c.Request.URL.Path, "/api/") {
 		c.JSON(200, gin.H{"data": p})
 		return
 	} else {
-		c.Redirect(303, Path)
+		c.Redirect(303, "/g1/post")
 		return
 	}
 
@@ -265,6 +277,7 @@ func rt(c *gin.Context) {
 	r.StatusCode = 200
 	r.Data = gin.H{"rm": rm, "path": c.FullPath()}
 	r.Template = "results.tmpl"
+	log.Printf("%+v\n",rm)
 	send(r, c)
 
 }
@@ -361,7 +374,7 @@ func nw(c *gin.Context) {
 	}
 	r.StatusCode = 200
 	r.Data = formValues
-	r.Template = "new.tmpl"
+	r.Template = "login.tmpl"
 	send(r, c)
 	return
 }
@@ -399,7 +412,26 @@ func StructFields(aStruct any, aKey string) ([]string, error) {
 	}
 	return values, nil
 }
-
+func Auth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+	//authHeader:=c.Request.Header.Get("Authorization")
+	tokenString, err := c.Cookie("token")
+	if err != nil {
+		fmt.Println("Token missing in cookie")
+		c.Redirect(303, "/g1/login/new")
+		c.Abort()
+		return
+	}
+token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return secretKey, nil
+	})
+// Check for verification errors
+	if (err != nil)||(!token.Valid) {
+		c.Redirect(303,"/g1/login/new")
+		return
+	}
+	c.Next()
+}}
 // fragments buffer
 //result := DB.First(&p, id)
 //c.JSON(200, gin.H{"data": p})
