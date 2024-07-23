@@ -45,6 +45,7 @@ table {
 {{range $key,$value :=$row}}
 <td> {{  $value }}</td>
 {{end}}
+<!-- <td><a href="{{$url}}/{{$row.id}}/edit">edit</a> -->
 <td><a href="{{$url}}/{{$row.id}}/edit">edit</a>
 <form action="{{$url}}/{{$row.id}}/delete" method="post" ><input type="submit" value="Delete!" /></form>
 </td>

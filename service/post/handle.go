@@ -15,13 +15,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/alaa2amz/g1/mw"
-	"github.com/alaa2amz/g1/service"
-
-	"github.com/alaa2amz/g1/service/tag"
-    "github.com/alaa2amz/g1/service/login"
+	//	"github.com/alaa2amz/g1/mw"
 
 	//	"github.com/mitchellh/mapstructure"
 	"github.com/gin-gonic/gin"
@@ -29,10 +24,10 @@ import (
 )
 
 var (
-	DB             *gorm.DB
-	Path           string = "/g1/post"
-	Editions              = []string{"", "/api"}
-	TemplatePath          = "post/template"
+	R            *gin.Engine
+	DB           *gorm.DB
+	Path         string = "/post"
+	TemplatePath        = "post/template/"
 	//TODO:move near model
 	DroppedColumns = []string{"publish_at", "afloat"}
 )
@@ -64,43 +59,52 @@ var relations = map[string]string{
 	"co": "LIKE",
 }
 
+// model
+/*
 type Post struct {
-	ID    uint   `form:"id" gorm:"primaryKey"` //id should be removed from form
-	Title string `form:"title" binding:"required"`
-	Content string `form:"content" gorm:"default:null;not null"`
-	Abstract *string  `form:"abstract"`
-	Rate     *float64 `form:"rate"`
+	ID uint `form:"id" json:"id" gorm:"primaryKey"` //id should be removed from form
+	//Title    string   `form:"title" json:"title" binding:"required"`
+	Title   string   `form:"title" json:"title" validate:"required"`
+	Content string   `form:"content" json:"content" gorm:"default:null;not null"`
+	Name    *string  `form:"abstract"`
+	Rate    *float64 `form:"rate"`
 	//TagID    *uint    `form:"tagid"`
 	//Tag         *Tag       `form:"tag"`
 	//	PublishAt     *time.Time `form:"publish" time_format:"2006-01-02"`
-	CreatedAt time.Time 
-	UpdatedAt time.Time 
-	DeletedAt   time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt time.Time
 	//gorm.Model
 
 }
-type Tag tag.Tag
+
+//type Tag tag.Tag
 
 func Proto() (p Post) { return }
 
 func Protos() (p []Post) { return }
-
+*/
+/*
 func init() {
 	log.Println(Path + "init")
+	if service.R == nil {
+		log.Fatal("main router not initialized")
+	}
+
+	R = service.R
+	Register(R)
+
 	if service.DB == nil {
 		log.Fatal("main database not initialized")
 	}
+
 	DB = service.DB
+
 	for _, dropColumn := range DroppedColumns {
 		DB.Migrator().DropColumn(Proto(), dropColumn)
 	}
 	DB.AutoMigrate(Proto())
 
-	if service.R == nil {
-		log.Fatal("main router not initialized")
-	}
-	service.R.Use(login.Auth())
-	service.R = Register(service.R)
 }
 
 func Init() {
@@ -108,38 +112,36 @@ func Init() {
 	DB.AutoMigrate(Proto())
 	DB = service.DB
 }
+*/
+// routes register
+/*
+func Register(r *gin.Engine) {
+	cg := r.Group("") //common group
+	//cg.Use(login.Auth())
 
-// Register
-func Register(r *gin.Engine) *gin.Engine {
-	r.LoadHTMLGlob("**/**/template/*.tmpl")
-
-	for _, edition := range Editions {
-		fullPath := edition + Path
-		//end points in CRUD order
-		// cr -> create
-		// rt -> retrive
-		// gt -> get by ID
-		// up -> update by id
-		// dl -> delete by id
-		///// helpers
-		// nw -> new form or empty json
-		// ed -> edit form or json by id
-		// jg -> join generic other resoursec
-		r.POST(fullPath, cr)
-		r.GET(fullPath, mw.KissAuth, rt)
-		r.GET(fullPath+"/:id", gt)
-		r.PUT(fullPath+"/:id", up)
-		r.POST(fullPath+"/:id/update", up)
-		r.POST(fullPath+"/:id/delete", dl)
-		r.DELETE(fullPath+"/:id", dl)
-
-		//r.GET(fullPath+"/test", tst)
-		r.GET(fullPath+"/new", nw)
-		r.GET(fullPath+"/:id/edit", ed)
+	wg := cg.Group(Path) //web group
+	{
+		wg.GET("/new", nw)         //new
+		wg.POST("", cr)            //create
+		wg.GET("", rt)             //retrieve
+		wg.GET("/list", rt)        //retrieve
+		wg.GET("/:id", gt)         //get one
+		wg.GET("/:id/edit", ed)    //edit
+		wg.POST("/:id/update", up) //update
+		wg.POST("/:id/delete", dl) //delete
 	}
-	return r
-}
 
+	ag := cg.Group("/api" + Path) //api group
+	{
+		ag.POST("", cr)
+		ag.GET("", rt)
+		ag.GET("/:id", gt)
+		ag.PUT("/:id", up)
+		ag.DELETE("/:id", dl)
+	}
+
+}
+*/
 // TODO: c.send(reply)
 func send(r *Reply, c *gin.Context) {
 	errMsg := ""
@@ -236,12 +238,12 @@ func rt(c *gin.Context) {
 	//TODO:sort columns and rows
 	//TODO:smart sort
 	//TODO:pagination
-	ps := Protos() 		//model {p}rototype{s}
-	rm := []map[string]any{} //{r}esults {m}ap
-	r := &Reply{} 		//response reply
+	ps := Protos()              //model {p}rototype{s}
+	rm := []map[string]any{}    //{r}esults {m}ap
+	r := &Reply{}               //response reply
 	qs := c.Request.URL.Query() //query string map
 	terms := parseQueryString(qs)
-	log.Printf("terms: %+v\n", terms) //debug
+	log.Printf("terms: %+v\n", terms)  //debug
 	QDB := DB.Session(&gorm.Session{}) //start session QDB
 	QDB.Model(&ps)
 	for _, term := range terms {
@@ -263,7 +265,11 @@ func rt(c *gin.Context) {
 		return
 	}
 	r.StatusCode = 200
-	r.Data = gin.H{"rm": rm, "path": c.FullPath()}
+	path := c.FullPath()
+	if strings.HasSuffix(path, "/list") {
+		path = path[:len("/list")]
+	}
+	r.Data = gin.H{"rm": rm, "path": path}
 	r.Template = "results.tmpl"
 	send(r, c)
 
@@ -286,7 +292,7 @@ func gt(c *gin.Context) {
 
 }
 
-// up update record CR{U}D 
+// up update record CR{U}D
 // NOTE: destructive, ie unset fields will set to zero value
 func up(c *gin.Context) {
 	p := Proto()
@@ -335,7 +341,8 @@ func up2(c *gin.Context) {
 func dl(c *gin.Context) {
 	p := Proto()
 	id := c.Param("id")
-	DB.Delete(&p, id)
+	result := DB.Delete(&p, id)
+	fmt.Printf("%+v\n", result)
 	c.Set("message", "deleted")
 	if strings.Contains(c.Request.URL.Path, "/api/") {
 		c.JSON(200, gin.H{"data": p})
@@ -365,7 +372,6 @@ func nw(c *gin.Context) {
 	send(r, c)
 	return
 }
-
 
 // ed edit record form
 // TODO:return empty curl with json data to be filled
@@ -405,3 +411,22 @@ func StructFields(aStruct any, aKey string) ([]string, error) {
 //c.JSON(200, gin.H{"data": p})
 //result := DB.Model(&p).Where("ID = ?", id).First(&m)
 //c.JSON(200, gin.H{"data": p})
+//end points in CRUD order
+// cr -> create
+// rt -> retrive
+// gt -> get by ID
+// up -> update by id
+// dl -> delete by id
+///// helpers
+// nw -> new form or empty json
+// ed -> edit form or json by id
+// jg -> join generic other resoursec
+//wg.POST("", cr)
+//wg.GET("", mw.KissAuth, rt)
+//wg.GET("/:id", gt)
+//wg.PUT("/:id", up)
+//wg.POST("/:id/update", up)
+//wg.POST("/:id/delete", dl)
+//wg.DELETE("/:id", dl)
+//wg.GET("/new", nw)
+//wg.GET("/:id/edit", ed)
