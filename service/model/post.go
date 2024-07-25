@@ -1,14 +1,14 @@
-package post
+package model
 
 import (
-	"github.com/alaa2amz/g1/service/model"
+	"time"
 )
-
+/*
 var (
 	Path           string = "/post"
 	DroppedColumns        = []string{"publish_at", "afloat"}
 )
-/*
+*/
 // type Content comment.Comment
 type Post struct {
 	ID uint `form:"id" json:"id" gorm:"primaryKey"` //id should be removed from form
@@ -24,11 +24,11 @@ type Post struct {
 	UpdatedAt time.Time
 	DeletedAt time.Time
 	//gorm.Model
-	//	Comments []comment.Comment
+	Comments []Comment
 }
-*/
-//type Tag tag.Tag
-type Post model.Post
-func Proto() (p Post) { return }
 
-func Protos() (p []Post) { return }
+//type Tag tag.Tag
+
+//func Proto() (p Post) { return }
+
+//func Protos() (p []Post) { return }

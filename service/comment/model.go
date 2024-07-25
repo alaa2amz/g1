@@ -1,16 +1,16 @@
-package post
+package comment
 
 import (
 	"github.com/alaa2amz/g1/service/model"
 )
 
 var (
-	Path           string = "/post"
+Path = "/comment"
 	DroppedColumns        = []string{"publish_at", "afloat"}
 )
 /*
 // type Content comment.Comment
-type Post struct {
+type  Comment struct{
 	ID uint `form:"id" json:"id" gorm:"primaryKey"` //id should be removed from form
 	//Title    string   `form:"title" json:"title" binding:"required"`
 	Title   string   `form:"title" json:"title" validate:"required"`
@@ -28,7 +28,7 @@ type Post struct {
 }
 */
 //type Tag tag.Tag
-type Post model.Post
-func Proto() (p Post) { return }
+type Comment model.Comment
+func Proto() (p Comment) { return }
 
-func Protos() (p []Post) { return }
+func Protos() (p []Comment) { return }
