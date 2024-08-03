@@ -5,9 +5,12 @@ import (
 	//"os"
 	"github.com/alaa2amz/g1/service"
 	_ "github.com/alaa2amz/g1/service/comment"
+	_ "github.com/alaa2amz/g1/service/tag"
 
 	// _ "github.com/alaa2amz/g1/service/pay_method"
 	_ "github.com/alaa2amz/g1/service/post"
+	_ "github.com/alaa2amz/g1/service/user"
+	_ "github.com/alaa2amz/g1/service/login"
 )
 
 func init() {

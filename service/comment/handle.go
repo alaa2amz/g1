@@ -114,8 +114,11 @@ func tst(c *gin.Context) {
 func cr(c *gin.Context) {
 	r := &Reply{}
 	p := Proto()
-
+	fmt.Printf("proto: %T\n",p.Post)
+	actions :=c.Param("actions")
+	println(actions)
 	err := c.ShouldBind(&p)
+	fmt.Printf("proto: %+v\n",p)
 	if err != nil {
 		r.StatusCode = 400
 		r.Error = err

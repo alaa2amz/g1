@@ -13,31 +13,29 @@ EOF
 
 for i in *.go
 do
-	cp -ib $i bkb/$i.bkb
+	cp -b $i bkb/$i.bkb
 	{
-	cat <<EOF
-	1
-	/^[ 	]*package
-	s/^.*$/package $path
-	w
-EOF
-} |ed $i
-
+		cat <<-EOF
+			1
+			/^[ 	]*package
+			s/^.*$/package $path
+			w
+		EOF
+	} |ed $i
 done
 
 { 
-cat <<EOF
-1
-/Path
-s/.*/Path = "\/$path"/
-/struct
-s/.*/type  $Path struct{
-/Proto
-s/p *[^)]*/p $Path/
-/Protos
+	cat <<-EOF
+		1
+		/Path
+		s/.*/Path = "\/$path"/
+		/model\.
+		s/.*/type  $Path model.$Path
+		/Proto
+		s/p *[^)]*/p $Path/
+		/Protos
+		s/p *[^)]*/p \[\]$Path/
+		w
 
-s/p *[^)]*/p \[\]$Path/
-w
-
-EOF
+	EOF
 } |ed model.go

@@ -7,7 +7,7 @@
 // TODO:edit and new points
 // TODO:validate basic data types on create
 // TODO:intensive error handling and testing
-package post
+package user
 
 import (
 	"fmt"
@@ -22,6 +22,7 @@ import (
 	//	"github.com/alaa2amz/g1/service/model"
 	"github.com/alaa2amz/g1/service/model"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -118,6 +119,25 @@ func cr(c *gin.Context) {
 	p := Proto()
 
 	err := c.ShouldBind(&p)
+	if err != nil {
+		r.StatusCode = 400
+		r.Error = err
+		r.Template = "error.tmpl"
+		send(r, c)
+		return
+	}
+
+
+///---///
+if p.Password != p.Confirm {
+
+		r.StatusCode = 400
+		r.Error = fmt.Errorf("Passwod not Confirm")
+	r.Template = "error.tmpl"
+		send(r, c)
+		return
+	}
+	p.PH,err=bcrypt.GenerateFromPassword([]byte(p.Password),bcrypt.MinCost)
 	if err != nil {
 		r.StatusCode = 400
 		r.Error = err

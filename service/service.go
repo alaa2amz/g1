@@ -19,6 +19,9 @@ var (
 	R     *gin.Engine
 	dberr error
 	Paths = map[string]any{}
+	Index = []string{}
+	StaticDir="./static"
+	StaticRoute="/static"
 )
 
 func init() {
@@ -32,4 +35,12 @@ func init() {
 		log.Fatal(dberr)
 	}
 	// model.Init()
+	R.GET("/",rootHandler)
+	R.Static(StaticRoute,StaticDir)
+}
+
+func rootHandler(c *gin.Context) {
+	log.Println("zzz")
+	c.HTML(200,"root.tmpl",gin.H{"index":Index,"static":StaticRoute})
+	return
 }

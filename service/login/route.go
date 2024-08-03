@@ -1,4 +1,4 @@
-package comment
+package login
 
 import "github.com/gin-gonic/gin"
 
@@ -16,6 +16,8 @@ func Register(r *gin.Engine) {
 		wg.GET("/:id/edit", ed)    //edit
 		wg.POST("/:id/update", up) //update
 		wg.POST("/:id/delete", dl) //delete
+
+		wg.POST("/:id/:path",crAs)
 	}
 
 	ag := cg.Group("/api" + Path) //api group

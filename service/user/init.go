@@ -1,4 +1,4 @@
-package post
+package user
 
 import (
 	"log"

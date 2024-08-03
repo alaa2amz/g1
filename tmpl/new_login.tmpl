@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Post</h2>
+
+<form action="." method="post">
+{{range .data.formValues}}
+{{if eq "re" .}}{{continue}}{{end}}
+  <label for="fname">{{.}}:</label><br>
+  <input type="text" id="{{.}}" name="{{.}}" value=""><br>
+ {{end}}
+ <input type=hidden name=re value="{{.data.re}}">
+  <input type="submit" value="Submit">
+</form> 
+
+
+</body>
+</html>

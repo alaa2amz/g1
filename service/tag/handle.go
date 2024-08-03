@@ -7,7 +7,7 @@
 // TODO:edit and new points
 // TODO:validate basic data types on create
 // TODO:intensive error handling and testing
-package post
+package tag
 
 import (
 	"fmt"
