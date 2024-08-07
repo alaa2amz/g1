@@ -17,8 +17,5 @@ func init() {
 
 func main() {
 	fmt.Println("Hello, Web!")
-	for k, p := range service.Paths {
-		fmt.Printf("%s -- %+v -- %T\n", k, p, p)
-	}
 	service.R.Run()
 }

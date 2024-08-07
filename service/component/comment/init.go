@@ -26,6 +26,7 @@ func init() {
 //	}
 	DB.AutoMigrate(Proto())
 	service.Paths[Path] = Proto()
+	service.Index = append(service.Index,Path)
 }
 
 func Init() {
