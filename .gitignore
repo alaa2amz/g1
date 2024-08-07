@@ -3,3 +3,7 @@ db.sqlite
 extern*
 db/*
 .*
+*/bkb/
+*.bkb
+**/bkb/
+*.orig

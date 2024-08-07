@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -125,6 +126,11 @@ func cr(c *gin.Context) {
 		send(r, c)
 		return
 	}
+	
+	///---///
+	println(c.GetUint("UserID"))
+	id:=c.GetUint("UserID")
+	p.UserID=&id
 
 	result := DB.Create(&p)
 	if result.Error != nil {
@@ -184,7 +190,13 @@ func rt(c *gin.Context) {
 	if strings.HasSuffix(path, "/list") {
 		path = path[:len("/list")]
 	}
-	r.Data = gin.H{"rm": rm, "path": path}
+	log.Println("path:",path)
+		keys:=[]string{}
+	if len(rm) > 0{
+		keys=tidyMapKeys(rm[0],LeadCols,TrailCols)
+		log.Println(keys)
+	}
+	r.Data = gin.H{"rm": rm, "keys":keys,"path": path}
 	r.Template = "results.tmpl"
 	send(r, c)
 
@@ -339,6 +351,43 @@ func crAs(c *gin.Context){
 		err=DB.Model(&p).Association(col).Append(&asP)	
 		if err != nil {panic(err)}
 	}
+}
+
+func tidyMapKeys(orig map[string]any ,leads ,trails []string) []string {
+	var middleKeys,bkbKeys,keys []string
+	for _,key := range leads{
+		if _,ok:=orig[key];!ok{
+			i:=slices.Index(leads,key)
+			if i<0{
+			panic("strange error")
+			}
+			leads=slices.Delete(leads,i,i+1)
+		}
+		}
+	
+	for _,key := range trails{
+		if _,ok:=orig[key];!ok{
+			i:=slices.Index(trails,key)
+			if i<0{
+			panic("strange error")
+			}
+			trails=slices.Delete(trails,i,i+1)
+		}
+		}
+		for key,_:=range orig {
+		bkbKeys=append(bkbKeys, key)
+		if (!slices.Contains(leads,key))&&(!slices.Contains(trails,key)){
+		middleKeys=append(middleKeys,key)
+		}
+	}
+if len(leads)+len(middleKeys)+len(trails) < len(orig) {
+	log.Panicln("col ordering error")
+	return bkbKeys
+}
+keys =append(keys,leads...)
+keys =append(keys,middleKeys...)
+keys =append(keys,trails...)
+return keys
 }
 //func crAs2(c *gin.Context){
 

@@ -7,7 +7,7 @@
 // TODO:edit and new points
 // TODO:validate basic data types on create
 // TODO:intensive error handling and testing
-package post
+package login
 
 import (
 	"fmt"
@@ -21,8 +21,10 @@ import (
 	//	"github.com/mitchellh/mapstructure"
 	//	"github.com/alaa2amz/g1/service/model"
 	"github.com/alaa2amz/g1/service/model"
+	"github.com/alaa2amz/g1/helpers/ajwt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	 "golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -125,8 +127,47 @@ func cr(c *gin.Context) {
 		send(r, c)
 		return
 	}
+	///---///
+	token,err:=func() (string,error){
+	logUser:=model.User{}
+	result:=DB.Where("name = ?",p.Name).First(&logUser)
+	if result.Error != nil {
+		return "",err
+	}
+	p.User=logUser
+	d(logUser)
+	err=bcrypt.CompareHashAndPassword(logUser.PH,[]byte(p.Password))
+	if err != nil {
+		return "",err
+	}
+	token,err:=ajwt.Token(ajwt.EasyClaims(p.Name,"client",360))
+	//token,err:=ajwt.Token(ajwt.EasyClaims(p.Name+" "+fmt.Sprint(p.ID),"client",360))
+	if err != nil {
+		return "",err
+	}
+	//p.TH,err=bcrypt.GenerateFromPassword([]byte(token),bcrypt.MinCost)
+	//if err != nil {
+	//	return "",err
+	//}
+	c.SetCookie("token", token, 3600, "/", c.Request.Host, false, true)
+	//c.SetCookie("token", token, 3600, "/", "localhost", false, true)
+	c.Set("message", "logged in")
+	//c.Set("UserID",logUser.ID)
+	//c.Set("User",logUser)
+	return token,nil
 
-	result := DB.Create(&p)
+	
+}()
+
+	if err != nil {
+		r.StatusCode = 400
+		r.Error = err
+		r.Template = "error.tmpl"
+		send(r, c)
+		return
+	}
+d(token)
+result := DB.Create(&p)
 	if result.Error != nil {
 		r.StatusCode = 400
 		r.Error = result.Error
@@ -139,10 +180,18 @@ func cr(c *gin.Context) {
 	//TODO:use send rc
 	c.Set("message", "updated")
 	if strings.Contains(c.Request.URL.Path, "/api/") {
-		c.JSON(200, gin.H{"data": p})
+		///---///
+		c.JSON(200, gin.H{"data": token})
 		return
 	} else {
-		c.Redirect(303, Path)
+		//c.Redirect(303, Path)
+		caller:= p.Re
+		log.Print("caller: ",caller)
+		if caller==""{
+caller="/"
+}
+		c.Redirect(303, caller)
+
 		return
 	}
 
@@ -282,8 +331,12 @@ func nw(c *gin.Context) {
 		return
 	}
 	r.StatusCode = 200
-	r.Data = formValues
-	r.Template = "new.tmpl"
+	r.Template = "new_login.tmpl"
+	re,ok:=c.GetQuery("re")
+	if ok {
+	c.Header("Re",re)
+}
+	r.Data = gin.H{"formValues":formValues,"re":re}
 	send(r, c)
 	return
 }
@@ -366,3 +419,16 @@ func crAs(c *gin.Context){
 //wg.DELETE("/:id", dl)
 //wg.GET("/new", nw)
 //wg.GET("/:id/edit", ed)
+func d(v any) {
+	fmt.Printf("pv: %+v - %T\n", v, v)
+}
+func p(err error) {
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+
+	//
+

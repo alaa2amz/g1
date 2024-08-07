@@ -1,3 +1,39 @@
-body{
-	background:yellow
+
+body {text-align: left;
+
+	background:yellow;
+}
+
+form {
+ display: inline-block;
+ margin-left: auto;
+     margin-right: auto;
+         text-align: left;
+}
+
+
+table {
+  font-family: arial, sans-serif;
+    border-collapse: collapse;
+      width: 90%;
+      margin-left:auto;margin-right:auto;
+border: 3px solid black;
+border-radius:5px
+}
+      td, th {
+        border: 3px solid black;
+	  text-align: left;
+	    padding: 8px;
+	    }
+tr{
+	background-color:lime
+}
+th{
+	background:gray;
+}
+	    tr:nth-child(even) {
+	      background-color: orange;
+	      }
+.lable{
+	color:brown;
 }

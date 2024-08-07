@@ -7,7 +7,7 @@
 // TODO:edit and new points
 // TODO:validate basic data types on create
 // TODO:intensive error handling and testing
-package post
+package user
 
 import (
 	"fmt"
@@ -22,6 +22,7 @@ import (
 	//	"github.com/alaa2amz/g1/service/model"
 	"github.com/alaa2amz/g1/service/model"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -126,6 +127,25 @@ func cr(c *gin.Context) {
 		return
 	}
 
+
+///---///
+if p.Password != p.Confirm {
+
+		r.StatusCode = 400
+		r.Error = fmt.Errorf("Passwod not Confirm")
+	r.Template = "error.tmpl"
+		send(r, c)
+		return
+	}
+	p.PH,err=bcrypt.GenerateFromPassword([]byte(p.Password),bcrypt.MinCost)
+	if err != nil {
+		r.StatusCode = 400
+		r.Error = err
+		r.Template = "error.tmpl"
+		send(r, c)
+		return
+	}
+
 	result := DB.Create(&p)
 	if result.Error != nil {
 		r.StatusCode = 400
@@ -184,6 +204,7 @@ func rt(c *gin.Context) {
 	if strings.HasSuffix(path, "/list") {
 		path = path[:len("/list")]
 	}
+	log.Println("path:",path)
 	r.Data = gin.H{"rm": rm, "path": path}
 	r.Template = "results.tmpl"
 	send(r, c)

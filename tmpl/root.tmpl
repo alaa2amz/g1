@@ -1,14 +1,8 @@
-<html>
-<head>
-<link rel="stylesheet" href="{{.static}}/main.css"/> 
-<head/>
-
-<body>
-<h1 id="LE-GO">LE GO<h1/>
+{{template "header1.tmpl" .}}
+<h1>BACKEND PANEL</h1>
 <ul>
 {{range .index}}
 <li><a href="{{.}}">{{.}}</a> </li> 
 {{end}}
 </ul>  
-<body/>  
-<html/> 
+{{template "footer1.tmpl" .}}

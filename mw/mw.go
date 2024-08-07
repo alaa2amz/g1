@@ -3,6 +3,9 @@ package mw
 import (
 //	"fmt"
 	"github.com/alaa2amz/g1/helpers/ajwt"
+	"github.com/alaa2amz/g1/service"
+	"github.com/alaa2amz/g1/service/model"
+
 	"github.com/gin-gonic/gin"
 	"log"
 	"strings"
@@ -58,6 +61,16 @@ if err!=nil{
 		return
 	}
 	c.Set("jwt", tokenStruct)
-	c.Next()
+	userName,err:=tokenStruct.Claims.GetSubject()
+	if err!=nil{c.AbortWithError(400,err)}
+	User:=model.User{}
+	result:=service.DB.Where("Name = ?",userName).First(&User)
+	if result.Error != nil{
+		c.AbortWithError(400,result.Error)
+	}
 
+	c.Set("UserID",User.ID)
+	c.Set("User",User)
+
+	c.Next()
 }

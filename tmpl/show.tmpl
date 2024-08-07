@@ -1,3 +1,7 @@
+{{template "header1.tmpl" .}}
+<ul> 
 {{range $key,$value :=.data}}
-{{$key }} -- {{ $value }}<br>
+<li> {{$key }}:  {{ $value }}</li>
 {{end}}
+</ul>
+{{template "footer1.tmpl" .}}

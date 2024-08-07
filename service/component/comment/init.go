@@ -21,9 +21,9 @@ func init() {
 
 	DB = service.DB
 
-	for _, dropColumn := range DroppedColumns {
-		DB.Migrator().DropColumn(Proto(), dropColumn)
-	}
+//	for _, dropColumn := range DroppedColumns {
+//		DB.Migrator().DropColumn(Proto(), dropColumn)
+//	}
 	DB.AutoMigrate(Proto())
 	service.Paths[Path] = Proto()
 }
