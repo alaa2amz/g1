@@ -5,11 +5,10 @@
 {{$type := "text"}}
 {{if eq "password" .}}{{$type = "password"}}{{end}}
 {{if eq "re" .}}{{continue}}{{end}}
-
-  <label for="fname">{{.}}:</label><br>
-  <input type="{{$type}}" id="{{.}}" name="{{.}}" value=""><br>
- {{end}}
- <input type=hidden name=re value="{{.data.re}}">
-  <input type="submit" value="Submit">
+<label for="fname">{{.}}:</label><br>
+<input type="{{$type}}" id="{{.}}" name="{{.}}" value=""><br>
+{{end}}
+<input type=hidden name=re value="{{.data.re}}">
+<br/><input type="submit" value="Submit">
 </form> 
 {{template "footer1.tmpl" .}}

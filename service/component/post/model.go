@@ -9,6 +9,7 @@ var (
 	DroppedColumns        = []string{"publish_at", "afloat"}
 	LeadCols = []string{"id"}
 	TrailCols = []string{"created_at","updated_at","deleted_at"}
+	TidyCols=[]string{}
 )
 
 type Post model.Post

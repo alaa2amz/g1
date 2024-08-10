@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+
 	//"gorm.io/driver/sqlite"
 	//"gorm.io/gorm/logger"
 	"gorm.io/driver/mysql"
@@ -24,7 +24,7 @@ var (
 )
 
 func init() {
-	fmt.Println("service init")
+	fmt.Println("service init",Index)
 
 	R = gin.Default()
 	R.LoadHTMLGlob("tmpl/*.tmpl")
@@ -52,6 +52,15 @@ func rootHandler(c *gin.Context) {
 	c.HTML(200,"root.tmpl",gin.H{"index":Index,"static":StaticRoute})
 	return
 }
+
+func PostMigrate(){
+	tables,_:=DB.Migrator().GetTables()
+	for _,table:=range tables{
+		cols,_:=DB.Migrator().ColumnTypes(table)
+		for _,col:=range cols{
+			fmt.Printf("%+v",col)
+		}}}
+
 
 /*//LOGGER
 logger.New()

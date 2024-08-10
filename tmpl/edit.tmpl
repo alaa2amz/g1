@@ -2,10 +2,10 @@
 <h2>edit {{.data.path}}</h2>
 <form action="{{.data.path}}/../update" method="post">
 {{range $k,$v := .data.m}}
-  <label for="fname">{{$k}}:</label><br>
-  <input type="text" id="{{$k}}" name="{{$k}}" value="{{$v}}"><br>
- {{end}}
-  <input type="submit" value="Submit">
+<label for="fname">{{$k}}:</label><br/>
+<input type="text" id="{{$k}}" name="{{$k}}" value="{{$v}}"><br/>
+{{end}}
+<br/><input type="submit" value="Submit">
 </form> 
 {{template "footer1.tmpl" .}}
 

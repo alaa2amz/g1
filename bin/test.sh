@@ -1,1 +1,1 @@
-go test ./service/post -c -o xyz.test&&./xyz.test --test.v
+go test ./service/component/post -c -o xyz.test&&./xyz.test --test.v

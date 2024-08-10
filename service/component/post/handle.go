@@ -23,6 +23,7 @@ import (
 	//	"github.com/alaa2amz/g1/service/model"
 	"github.com/alaa2amz/g1/service/model"
 	"github.com/gin-gonic/gin"
+//	"golang.org/x/exp/maps"
 	"gorm.io/gorm"
 )
 
@@ -126,11 +127,11 @@ func cr(c *gin.Context) {
 		send(r, c)
 		return
 	}
-	
+
 	///---///
 	println(c.GetUint("UserID"))
-	id:=c.GetUint("UserID")
-	p.UserID=&id
+	id := c.GetUint("UserID")
+	p.UserID = &id
 
 	result := DB.Create(&p)
 	if result.Error != nil {
@@ -190,13 +191,14 @@ func rt(c *gin.Context) {
 	if strings.HasSuffix(path, "/list") {
 		path = path[:len("/list")]
 	}
-	log.Println("path:",path)
-		keys:=[]string{}
-	if len(rm) > 0{
-		keys=tidyMapKeys(rm[0],LeadCols,TrailCols)
+	log.Println("path:", path)
+	keys := []string{}
+	if len(rm) > 0 {
+		//keys = tidySlice(maps.Keys(rm[0]), LeadCols, TrailCols)
+		keys = TidyCols
 		log.Println(keys)
 	}
-	r.Data = gin.H{"rm": rm, "keys":keys,"path": path}
+	r.Data = gin.H{"rm": rm, "keys": keys, "path": path}
 	r.Template = "results.tmpl"
 	send(r, c)
 
@@ -283,18 +285,18 @@ func dl(c *gin.Context) {
 // nw new record form
 // TODO:return empty curl with json data to be filled
 func nw(c *gin.Context) {
-	p := Proto()
+	//p := Proto()
 	r := &Reply{}
-	formValues, err := StructFields(p, "form")
-	if err != nil {
-		r.StatusCode = 400
-		r.Error = err
-		r.Template = "error.tmpl"
-		send(r, c)
-		return
-	}
+	////formValues, err := StructFields(p, "form")
+	//if err != nil {
+	//	r.StatusCode = 400
+	//	r.Error = err
+	//	r.Template = "error.tmpl"
+	//	send(r, c)
+	//	return
+	//i}
 	r.StatusCode = 200
-	r.Data = formValues
+	r.Data = gin.H{"cols":TidyCols,"path":Path}
 	r.Template = "new.tmpl"
 	send(r, c)
 	return
@@ -333,62 +335,69 @@ func StructFields(aStruct any, aKey string) ([]string, error) {
 	return values, nil
 }
 
-func crAs(c *gin.Context){
+func crAs(c *gin.Context) {
 	//TODO:check pid if exist?
-	pid:=c.Param("id")
-	ass:=c.Param("path")
-	log.Println(pid,ass)
-	p:=Proto()
-	pidint,err:=strconv.Atoi(pid)
-	if err !=nil{panic(err)}
-	p.ID=uint(pidint)
+	pid := c.Param("id")
+	ass := c.Param("path")
+	log.Println(pid, ass)
+	p := Proto()
+	pidint, err := strconv.Atoi(pid)
+	if err != nil {
+		panic(err)
+	}
+	p.ID = uint(pidint)
 	switch ass {
-	case "comment" :
-		col:="Comments"  ///
-		asP:=model.Comment{} ///
-		err=c.ShouldBind(&asP)
-		if err != nil {panic(err)}
-		err=DB.Model(&p).Association(col).Append(&asP)	
-		if err != nil {panic(err)}
+	case "comment":
+		col := "Comments"      ///
+		asP := model.Comment{} ///
+		err = c.ShouldBind(&asP)
+		if err != nil {
+			panic(err)
+		}
+		err = DB.Model(&p).Association(col).Append(&asP)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
-func tidyMapKeys(orig map[string]any ,leads ,trails []string) []string {
-	var middleKeys,bkbKeys,keys []string
-	for _,key := range leads{
-		if _,ok:=orig[key];!ok{
-			i:=slices.Index(leads,key)
-			if i<0{
-			panic("strange error")
+func tidySlice(orig []string, leads, trails []string) []string {
+	var middleKeys, bkbKeys, keys []string
+	for _, key := range leads {
+		if ok := slices.Contains(orig,key); !ok {
+			i := slices.Index(leads, key)
+			if i < 0 {
+				panic("strange error")
 			}
-			leads=slices.Delete(leads,i,i+1)
-		}
-		}
-	
-	for _,key := range trails{
-		if _,ok:=orig[key];!ok{
-			i:=slices.Index(trails,key)
-			if i<0{
-			panic("strange error")
-			}
-			trails=slices.Delete(trails,i,i+1)
-		}
-		}
-		for key,_:=range orig {
-		bkbKeys=append(bkbKeys, key)
-		if (!slices.Contains(leads,key))&&(!slices.Contains(trails,key)){
-		middleKeys=append(middleKeys,key)
+			leads = slices.Delete(leads, i, i+1)
 		}
 	}
-if len(leads)+len(middleKeys)+len(trails) < len(orig) {
-	log.Panicln("col ordering error")
-	return bkbKeys
+
+	for _, key := range trails {
+		if ok := slices.Contains(orig,key); !ok {
+			i := slices.Index(trails, key)
+			if i < 0 {
+				panic("strange error")
+			}
+			trails = slices.Delete(trails, i, i+1)
+		}
+	}
+	for _, key := range orig {
+		bkbKeys = append(bkbKeys, key)
+		if (!slices.Contains(leads, key)) && (!slices.Contains(trails, key)) {
+			middleKeys = append(middleKeys, key)
+		}
+	}
+	if len(leads)+len(middleKeys)+len(trails) < len(orig) {
+		log.Panicln("col ordering error")
+		return bkbKeys
+	}
+	keys = append(keys, leads...)
+	keys = append(keys, middleKeys...)
+	keys = append(keys, trails...)
+	return keys
 }
-keys =append(keys,leads...)
-keys =append(keys,middleKeys...)
-keys =append(keys,trails...)
-return keys
-}
+
 //func crAs2(c *gin.Context){
 
 // fragments buffer

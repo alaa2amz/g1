@@ -1,17 +1,15 @@
-<!DOCTYPE html>
-<html>
-<body>
-
-<h2>Post</h2>
-
+{{template "header1.tmpl" .}}
+<h2>new {{.data.path}}</h2>
 <form action="." method="post">
-{{range .data}}
-  <label for="fname">{{.}}:</label><br>
-  <input type="text" id="{{.}}" name="{{.}}" value=""><br>
+{{range .data.cols}}
+  <label for="fname">{{.}}:</label><br/>
+  <input type="text" id="{{.}}" name="{{.}}" value=""><br/>
  {{end}}
-  <input type="submit" value="Submit">
+<br/><input type="submit" value="Submit">
 </form> 
+{{template "footer1.tmpl" .}}
 
 
-</body>
-</html>
+
+
+
