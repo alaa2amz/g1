@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/alaa2amz/g1/service"
+h	"github.com/alaa2amz/g1/helpers"
 )
 
 func init() {
@@ -25,15 +26,17 @@ func init() {
 	//		DB.Migrator().DropColumn(Proto(), dropColumn)
 	//	}
 	DB.AutoMigrate(Proto())
-	colTypes,err:=DB.Migrator().ColumnTypes(Proto())
-	if err!=nil{panic(err)}
-	cols:=[]string{}
-	for _,colType:= range colTypes{
-		cols=append(cols,colType.Name())
+	colTypes, err := DB.Migrator().ColumnTypes(Proto())
+	if err != nil {
+		panic(err)
 	}
-	TidyCols=tidySlice(cols,LeadCols,TrailCols)
-	log.Println("TidyCols",TrailCols)
-	log.Println("Cols",cols)
+	cols := []string{}
+	for _, colType := range colTypes {
+		cols = append(cols, colType.Name())
+	}
+	TidyCols = h.TidySlice(cols, LeadCols, TrailCols)
+	log.Println("TidyCols", TrailCols)
+	log.Println("Cols", cols)
 	service.Paths[Path] = Proto()
 	service.Index = append(service.Index, Path)
 }

@@ -12,136 +12,55 @@ package post
 import (
 	"fmt"
 	"log"
-	"reflect"
-	"slices"
 	"strconv"
 	"strings"
 
-	//	"github.com/alaa2amz/g1/mw"
-
-	//	"github.com/mitchellh/mapstructure"
-	//	"github.com/alaa2amz/g1/service/model"
+	h "github.com/alaa2amz/g1/helpers"
 	"github.com/alaa2amz/g1/service/model"
 	"github.com/gin-gonic/gin"
-//	"golang.org/x/exp/maps"
 	"gorm.io/gorm"
+	//"github.com/alaa2amz/g1/mw"
+	//"golang.org/x/exp/maps"
+	//"github.com/alaa2amz/g1/service/model"
+	//"github.com/mitchellh/mapstructure"
 )
 
-var (
-	R  *gin.Engine
-	DB *gorm.DB
-)
-
-type Reply struct {
-	StatusCode int
-	Data       any
-	Error      error
-	Template   string
-}
-
-type QueryTerm struct {
-	Or       bool
-	Column   string
-	Relation string
-	//Values   string
-	Values []string
-}
-
-var relations = map[string]string{
-	"eq": "=",
-	"ne": "<>",
-	"gt": ">",
-	"ge": ">=",
-	"lt": "<",
-	"le": "<=",
-	"in": "IN",
-	"ni": "NOT IN",
-	"co": "LIKE",
-}
-
-// TODO: c.send(reply)
-func send(r *Reply, c *gin.Context) {
-	errMsg := ""
-	if r.Error != nil {
-		errMsg = r.Error.Error()
-	}
-	if ok := strings.Contains(c.Request.URL.Path, "/api/"); ok {
-		//handeling data and errors
-		c.JSON(r.StatusCode, gin.H{"data": r.Data, "error": errMsg})
-		return
-	} else {
-		//TODO:handle templates errors and unfound templates or empty templates
-		c.HTML(r.StatusCode, r.Template, gin.H{"data": r.Data, "error": errMsg})
-		return
-	}
-}
-
-func parseQueryString(qs map[string][]string) []QueryTerm {
-	terms := []QueryTerm{}
-	for key, values := range qs {
-		for _, value := range values {
-			term := QueryTerm{}
-			term.Column = key
-			vals := strings.Split(value, "~")
-			if len(vals) == 1 {
-				term.Values = append(term.Values, vals[0])
-				term.Relation = "="
-				terms = append(terms, term)
-				continue
-
-			} else if vals[0][0:2] == "or" {
-				term.Or = true
-				vals[0] = vals[0][2:]
-			}
-			if v, ok := relations[vals[0]]; ok {
-				term.Relation = v
-				term.Values = append(term.Values, vals[1:]...)
-			} else {
-				term.Relation = "="
-			}
-			switch vals[0] {
-			case "co":
-				term.Values[0] = "%" + term.Values[0] + "%"
-			default:
-			}
-			terms = append(terms, term)
-		}
-	}
-	return terms
-}
 func tst(c *gin.Context) {
-	r := &Reply{}
-	send(r, c)
+	r := &h.Reply{}
+	h.Send(r, c)
 }
 
 // cr Create Handler
 func cr(c *gin.Context) {
-	r := &Reply{}
+	//r := &h.Reply{}
 	p := Proto()
-
 	err := c.ShouldBind(&p)
+	h.Bail(c,400,err)
+	/*
 	if err != nil {
 		r.StatusCode = 400
 		r.Error = err
 		r.Template = "error.tmpl"
-		send(r, c)
+		h.Send(r, c)
 		return
 	}
+	*/
 
 	///---///
-	println(c.GetUint("UserID"))
 	id := c.GetUint("UserID")
 	p.UserID = &id
 
 	result := DB.Create(&p)
+	h.Bail(c,400,result.Error)
+	/*
 	if result.Error != nil {
 		r.StatusCode = 400
 		r.Error = result.Error
 		r.Template = "error.tmpl"
-		send(r, c)
+		h.Send(r, c)
 		return
 	}
-	//
+	*/
 
 	//TODO:use send rc
 	c.Set("message", "updated")
@@ -162,9 +81,9 @@ func rt(c *gin.Context) {
 	//TODO:pagination
 	ps := Protos()              //model {p}rototype{s}
 	rm := []map[string]any{}    //{r}esults {m}ap
-	r := &Reply{}               //response reply
+	r := &h.Reply{}             //response reply
 	qs := c.Request.URL.Query() //query string map
-	terms := parseQueryString(qs)
+	terms := h.ParseQueryString(qs)
 	log.Printf("terms: %+v\n", terms)  //debug
 	QDB := DB.Session(&gorm.Session{}) //start session QDB
 	QDB.Model(&ps)
@@ -179,13 +98,17 @@ func rt(c *gin.Context) {
 	}
 	log.Println(QDB.ToSQL(func(q *gorm.DB) *gorm.DB { return q.Find(&ps) })) //debug
 	result := QDB.Model(&ps).Order("id desc").Find(&rm)
+	h.Bail(c,500,result.Error)
+	/*
 	if result.Error != nil {
 		r.StatusCode = 500
 		r.Error = result.Error
 		r.Template = "error.tmpl"
-		send(r, c)
+		h.Send(r, c)
 		return
 	}
+	*/
+
 	r.StatusCode = 200
 	path := c.FullPath()
 	if strings.HasSuffix(path, "/list") {
@@ -200,7 +123,7 @@ func rt(c *gin.Context) {
 	}
 	r.Data = gin.H{"rm": rm, "keys": keys, "path": path}
 	r.Template = "results.tmpl"
-	send(r, c)
+	h.Send(r, c)
 
 }
 
@@ -210,14 +133,18 @@ func gt(c *gin.Context) {
 	m := map[string]interface{}{}
 	id := c.Param("id")
 	result := DB.Model(&p).First(&m, id)
+	h.Bail(c,500,result.Error)
+	/*
 	if result.Error != nil {
 		//c.JSON(400, gin.H{"error": result.Error.Error()})
-		r := &Reply{400, nil, result.Error, "error.tmpl"}
-		send(r, c)
+		r := &h.Reply{400, nil, result.Error, "error.tmpl"}
+		h.Send(r, c)
 		return
 	}
-	r := &Reply{200, &m, nil, "show.tmpl"}
-	send(r, c)
+	*/
+
+	r := &h.Reply{200, &m, nil, "show.tmpl"}
+	h.Send(r, c)
 
 }
 
@@ -286,7 +213,7 @@ func dl(c *gin.Context) {
 // TODO:return empty curl with json data to be filled
 func nw(c *gin.Context) {
 	//p := Proto()
-	r := &Reply{}
+	r := &h.Reply{}
 	////formValues, err := StructFields(p, "form")
 	//if err != nil {
 	//	r.StatusCode = 400
@@ -296,9 +223,9 @@ func nw(c *gin.Context) {
 	//	return
 	//i}
 	r.StatusCode = 200
-	r.Data = gin.H{"cols":TidyCols,"path":Path}
+	r.Data = gin.H{"cols": TidyCols, "path": Path}
 	r.Template = "new.tmpl"
-	send(r, c)
+	h.Send(r, c)
 	return
 }
 
@@ -306,7 +233,7 @@ func nw(c *gin.Context) {
 // TODO:return empty curl with json data to be filled
 func ed(c *gin.Context) {
 	p := Proto()
-	r := &Reply{}
+	r := &h.Reply{}
 	m := map[string]any{} //m record {m}ap
 	//TODO:handle errorr
 	id := c.Param("id")
@@ -314,25 +241,8 @@ func ed(c *gin.Context) {
 	r.StatusCode = 200
 	r.Data = gin.H{"m": m, "path": c.Request.URL.EscapedPath(), "id": id}
 	r.Template = "edit.tmpl"
-	send(r, c)
+	h.Send(r, c)
 	return
-}
-
-// StructFields given struct and key
-// returns fields tags values slice of that key
-func StructFields(aStruct any, aKey string) ([]string, error) {
-	values := []string{}
-	typ := reflect.TypeOf(aStruct)
-	if typ.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("%s is not a struct", typ)
-	}
-	for i := 0; i < typ.NumField(); i++ {
-		fld := typ.Field(i)
-		if val := fld.Tag.Get(aKey); val != "" {
-			values = append(values, val)
-		}
-	}
-	return values, nil
 }
 
 func crAs(c *gin.Context) {
@@ -359,43 +269,6 @@ func crAs(c *gin.Context) {
 			panic(err)
 		}
 	}
-}
-
-func tidySlice(orig []string, leads, trails []string) []string {
-	var middleKeys, bkbKeys, keys []string
-	for _, key := range leads {
-		if ok := slices.Contains(orig,key); !ok {
-			i := slices.Index(leads, key)
-			if i < 0 {
-				panic("strange error")
-			}
-			leads = slices.Delete(leads, i, i+1)
-		}
-	}
-
-	for _, key := range trails {
-		if ok := slices.Contains(orig,key); !ok {
-			i := slices.Index(trails, key)
-			if i < 0 {
-				panic("strange error")
-			}
-			trails = slices.Delete(trails, i, i+1)
-		}
-	}
-	for _, key := range orig {
-		bkbKeys = append(bkbKeys, key)
-		if (!slices.Contains(leads, key)) && (!slices.Contains(trails, key)) {
-			middleKeys = append(middleKeys, key)
-		}
-	}
-	if len(leads)+len(middleKeys)+len(trails) < len(orig) {
-		log.Panicln("col ordering error")
-		return bkbKeys
-	}
-	keys = append(keys, leads...)
-	keys = append(keys, middleKeys...)
-	keys = append(keys, trails...)
-	return keys
 }
 
 //func crAs2(c *gin.Context){
