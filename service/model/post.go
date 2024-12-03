@@ -4,13 +4,14 @@ import "gorm.io/gorm"
 
 type Post struct {
 	gorm.Model
-	UserID   *uint
-	User     User
-	Title    string   `form:"title" json:"title" validate:"required"`
-	Content  string   `form:"content" json:"content" gorm:"not null"`
-	Name     *string  `form:"abstract"`
-	Rate     *float64 `form:"rate"`
-	Comments []Comment
+	//UserID   *uint ` gorm:"default:null"`
+
+	//User     *User
+	Title   string   `form:"title" json:"title" validate:"required"`
+	Content string   `form:"content" json:"content" gorm:"not null"`
+	Name    *string  `form:"abstract"`
+	Rate    *float64 `form:"rate"`
+	//Comments []Comment
 }
 
 //Content string   `form:"content" json:"content" gorm:"default:null;not null"`

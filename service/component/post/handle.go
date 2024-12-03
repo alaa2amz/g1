@@ -11,18 +11,18 @@ package post
 
 import (
 	"fmt"
-	"log"
-	"strconv"
-	"strings"
-
 	h "github.com/alaa2amz/g1/helpers"
 	"github.com/alaa2amz/g1/service/model"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"log"
+	"strconv"
+	"strings"
 	//"github.com/alaa2amz/g1/mw"
 	//"golang.org/x/exp/maps"
 	//"github.com/alaa2amz/g1/service/model"
 	//"github.com/mitchellh/mapstructure"
+	//"reflect"
 )
 
 func tst(c *gin.Context) {
@@ -32,45 +32,23 @@ func tst(c *gin.Context) {
 
 // cr Create Handler
 func cr(c *gin.Context) {
-	//r := &h.Reply{}
 	p := Proto()
 	err := c.ShouldBind(&p)
-	h.Bail(c,400,err)
-	/*
-	if err != nil {
-		r.StatusCode = 400
-		r.Error = err
-		r.Template = "error.tmpl"
-		h.Send(r, c)
-		return
-	}
-	*/
+	h.Bail(c, 400, err)
 
+	///---
+	//id := c.GetUint("UserID")
+	//p.UserID = &id
 	///---///
-	id := c.GetUint("UserID")
-	p.UserID = &id
 
 	result := DB.Create(&p)
-	h.Bail(c,400,result.Error)
-	/*
-	if result.Error != nil {
-		r.StatusCode = 400
-		r.Error = result.Error
-		r.Template = "error.tmpl"
-		h.Send(r, c)
-		return
-	}
-	*/
+	h.Bail(c, 400, result.Error)
 
-	//TODO:use send rc
-	c.Set("message", "updated")
-	if strings.Contains(c.Request.URL.Path, "/api/") {
-		c.JSON(200, gin.H{"data": p})
-		return
-	} else {
-		c.Redirect(303, Path)
-		return
-	}
+	r := &h.Reply{}
+	r.StatusCode = 200
+	r.Data = gin.H{"data": p}
+	r.Redirect = Path
+	h.Send(r, c)
 
 }
 
@@ -85,7 +63,7 @@ func rt(c *gin.Context) {
 	qs := c.Request.URL.Query() //query string map
 	terms := h.ParseQueryString(qs)
 	log.Printf("terms: %+v\n", terms)  //debug
-	QDB := DB.Session(&gorm.Session{}) //start session QDB
+	QDB := DB.Session(&gorm.Session{}) //start session Query DB
 	QDB.Model(&ps)
 	for _, term := range terms {
 		queryString := fmt.Sprintf("%s %s ?", term.Column, term.Relation)
@@ -98,26 +76,16 @@ func rt(c *gin.Context) {
 	}
 	log.Println(QDB.ToSQL(func(q *gorm.DB) *gorm.DB { return q.Find(&ps) })) //debug
 	result := QDB.Model(&ps).Order("id desc").Find(&rm)
-	h.Bail(c,500,result.Error)
-	/*
-	if result.Error != nil {
-		r.StatusCode = 500
-		r.Error = result.Error
-		r.Template = "error.tmpl"
-		h.Send(r, c)
-		return
-	}
-	*/
+	h.Bail(c, 500, result.Error)
 
 	r.StatusCode = 200
-	path := c.FullPath()
+	path := c.FullPath() //TODO:Unifi Path or c.FullPath
 	if strings.HasSuffix(path, "/list") {
 		path = path[:len("/list")]
 	}
 	log.Println("path:", path)
 	keys := []string{}
 	if len(rm) > 0 {
-		//keys = tidySlice(maps.Keys(rm[0]), LeadCols, TrailCols)
 		keys = TidyCols
 		log.Println(keys)
 	}
@@ -133,17 +101,17 @@ func gt(c *gin.Context) {
 	m := map[string]interface{}{}
 	id := c.Param("id")
 	result := DB.Model(&p).First(&m, id)
-	h.Bail(c,500,result.Error)
+	h.Bail(c, 500, result.Error)
 	/*
-	if result.Error != nil {
-		//c.JSON(400, gin.H{"error": result.Error.Error()})
-		r := &h.Reply{400, nil, result.Error, "error.tmpl"}
-		h.Send(r, c)
-		return
-	}
+		if result.Error != nil {
+			//c.JSON(400, gin.H{"error": result.Error.Error()})
+			r := &h.Reply{400, nil, result.Error, "error.tmpl"}
+			h.Send(r, c)
+			return
+		}
 	*/
 
-	r := &h.Reply{200, &m, nil, "show.tmpl"}
+	r := &h.Reply{200, &m, nil, "show.tmpl", ""}
 	h.Send(r, c)
 
 }
@@ -160,18 +128,13 @@ func up(c *gin.Context) {
 	}
 	p.ID = uint(uintID)
 	result := DB.Save(&p)
-	if result.Error != nil {
-		panic(result.Error)
-	}
-	//TODO:use send rc
-	c.Set("message", "updated")
-	if strings.Contains(c.Request.URL.Path, "/api/") {
-		c.JSON(200, gin.H{"data": p})
-		return
-	} else {
-		c.Redirect(303, Path)
-		return
-	}
+	h.Bail(c, 400, result.Error)
+	c.Set("message", "Updated")
+	r := &h.Reply{}
+	r.StatusCode = 200
+	r.Data = gin.H{"data": p}
+	r.Redirect = Path
+	h.Send(r, c)
 }
 
 // up2 update record CR{U}D
@@ -180,16 +143,15 @@ func up2(c *gin.Context) {
 	p := Proto()
 	c.Bind(&p)
 	id := c.Param("id")
-	DB.Model(&p).Where("ID=?", id).Updates(&p)
+	result := DB.Model(&p).Where("ID=?", id).Updates(&p)
+	h.Bail(c, 400, result.Error)
+	c.Set("message", "Updated")
+	r := &h.Reply{}
+	r.StatusCode = 200
+	r.Data = gin.H{"data": p}
+	r.Redirect = Path
+	h.Send(r, c)
 	//TODO:use send rc
-	c.Set("message", "updated")
-	if strings.Contains(c.Request.URL.Path, "/api/") {
-		c.JSON(200, gin.H{"data": p})
-		return
-	} else {
-		c.Redirect(303, Path)
-		return
-	}
 }
 
 // dl delete record CRU{D}
@@ -198,15 +160,14 @@ func dl(c *gin.Context) {
 	p := Proto()
 	id := c.Param("id")
 	result := DB.Delete(&p, id)
-	fmt.Printf("%+v\n", result)
+	h.Bail(c, 400, result.Error)
 	c.Set("message", "deleted")
-	if strings.Contains(c.Request.URL.Path, "/api/") {
-		c.JSON(200, gin.H{"data": p})
-		return
-	} else {
-		c.Redirect(303, Path)
-		return
-	}
+	r := &h.Reply{}
+	r.StatusCode = 200
+	r.Data = gin.H{"data": p}
+	r.Redirect = Path
+	h.Send(r, c)
+	return
 }
 
 // nw new record form
@@ -214,14 +175,6 @@ func dl(c *gin.Context) {
 func nw(c *gin.Context) {
 	//p := Proto()
 	r := &h.Reply{}
-	////formValues, err := StructFields(p, "form")
-	//if err != nil {
-	//	r.StatusCode = 400
-	//	r.Error = err
-	//	r.Template = "error.tmpl"
-	//	send(r, c)
-	//	return
-	//i}
 	r.StatusCode = 200
 	r.Data = gin.H{"cols": TidyCols, "path": Path}
 	r.Template = "new.tmpl"
@@ -235,10 +188,11 @@ func ed(c *gin.Context) {
 	p := Proto()
 	r := &h.Reply{}
 	m := map[string]any{} //m record {m}ap
-	//TODO:handle errorr
 	id := c.Param("id")
-	DB.Model(&p).First(&m, id)
+	result := DB.Model(&p).First(&m, id)
+	h.Bail(c, 400, result.Error)
 	r.StatusCode = 200
+	//TODO:unify pathes
 	r.Data = gin.H{"m": m, "path": c.Request.URL.EscapedPath(), "id": id}
 	r.Template = "edit.tmpl"
 	h.Send(r, c)
@@ -297,3 +251,65 @@ func crAs(c *gin.Context) {
 //wg.DELETE("/:id", dl)
 //wg.GET("/new", nw)
 //wg.GET("/:id/edit", ed)
+//TODO:use send rc
+/*
+	c.Set("message", "created")
+	if strings.Contains(c.Request.URL.Path, "/api/") {
+		c.JSON(200, gin.H{"data": p})
+		return
+	} else {
+		c.Redirect(303, Path)
+		return
+	}
+*/
+/*
+
+	if result.Error != nil {
+		r.StatusCode = 500
+		r.Error = result.Error
+		r.Template = "error.tmpl"
+		h.Send(r, c)
+		return
+	}
+*/
+//keys = tidySlice(maps.Keys(rm[0]), LeadCols, TrailCols)
+////formValues, err := StructFields(p, "form")
+//if err != nil {
+//	r.StatusCode = 400
+//	r.Error = err
+//	r.Template = "error.tmpl"
+//	send(r, c)
+//	return
+//i}
+/*
+	if strings.Contains(c.Request.URL.Path, "/api/") {
+		c.JSON(200, gin.H{"data": p})
+		return
+	} else {
+		c.Redirect(303, Path)
+		return
+	}
+*/
+/*
+
+	if strings.Contains(c.Request.URL.Path, "/api/") {
+		c.JSON(200, gin.H{"data": p})
+		return
+	} else {
+		c.Redirect(303, Path)
+		return
+	}
+*/
+/*
+	if result.Error != nil {
+		panic(result.Error)
+	}
+	//TODO:use send rc
+	c.Set("message", "updated")
+	if strings.Contains(c.Request.URL.Path, "/api/") {
+		c.JSON(200, gin.H{"data": p})
+		return
+	} else {
+		c.Redirect(303, Path)
+		return
+	}*/

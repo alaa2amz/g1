@@ -4,63 +4,82 @@ package service
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-
-	//"gorm.io/driver/sqlite"
-	//"gorm.io/gorm/logger"
+	"github.com/jinzhu/inflection"
 	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	//"gorm.io/gorm/logger"
+	//"gorm.io/driver/sqlite"
 )
 
 var (
-	DB    *gorm.DB
-	R     *gin.Engine
-	dberr error
-	Paths = map[string]any{}
-	Index = []string{}
-	StaticDir="./static"
-	StaticRoute="/static"
+	DB          *gorm.DB
+	R           *gin.Engine
+	dberr       error
+	Paths       = map[string]any{}
+	Index       = []string{}
+	Childs      = map[string][]string{}
+	StaticDir   = "./static"
+	StaticRoute = "/static"
 )
 
 func init() {
-	fmt.Println("service init",Index)
+	fmt.Println("service init", Index)
 
 	R = gin.Default()
-	R.LoadHTMLGlob("tmpl/*.tmpl")
-	
-	
-	dsn := "alaazak:0100ZakAD@/alaazak_g1?charset=utf8mb4&parseTime=True"
-  	//dsn := "alaazak:0100ZakAD@tcp(127.0.0.1:3306)/alaazak_g1?charset=utf8mb4&parseTime=True&loc=Local"
-	//AD//dsn := "alaazak:0100ZakAD@tcp(mysql-alaazak.alwaysdata.net:3306)/alaazak_g1?charset=utf8mb4&parseTime=True"
-	
-	//sqlite//DB, dberr = gorm.Open(sqlite.Open("db.sqlite?_foreign_keys=on"))
+
+	/*AD
+	dsn := `alaazak:0100ZakAD@tcp(mysql-alaazak.alwaysdata.net:3306)/alaazak_g1?`
+		+`charset=utf8mb4&parseTime=True`
+	*/
+
+	//sqlite
 	//DB, dberr = gorm.Open(sqlite.Open("db.sqlite?_foreign_keys=on"))
+
+	//local mysql
+	dsn := "alaazak:0100ZakAD@/alaazak_g1?charset=utf8mb4&parseTime=True"
+
+	//prepairing DB
 	DB, dberr = gorm.Open(mysql.Open(dsn), &gorm.Config{})
-
-
-
 	if dberr != nil {
 		log.Fatal(dberr)
 	}
+
 	//DB=DB.Debug()
-	R.GET("/",rootHandler)
-	R.Static(StaticRoute,StaticDir)
+
+	R.GET("/", rootHandler)
+	R.Static(StaticRoute, StaticDir)
+	//TODO: handling no route
 }
 
 func rootHandler(c *gin.Context) {
-	c.HTML(200,"root.tmpl",gin.H{"index":Index,"static":StaticRoute})
+	c.HTML(200, "root.tmpl", gin.H{"index": Index, "static": StaticRoute})
 	return
 }
 
-func PostMigrate(){
-	tables,_:=DB.Migrator().GetTables()
-	for _,table:=range tables{
-		cols,_:=DB.Migrator().ColumnTypes(table)
-		for _,col:=range cols{
-			fmt.Printf("%+v",col)
-		}}}
+func PostMigrate() {
+	tables, err := DB.Migrator().GetTables()
+	if err != nil {
+		log.Panic(err)
+	}
 
+	for _, table := range tables {
+		cols, err := DB.Migrator().ColumnTypes(table)
+		if err != nil {
+			log.Panic(err)
+		}
+		
+		for _, col := range cols {
+			if cut, ok := strings.CutSuffix(col.Name(), "_id"); ok {
+				colPlural := inflection.Plural(cut)
+				Childs[colPlural] = append(Childs[colPlural], table)
+			}
+
+		}
+	}
+}
 
 /*//LOGGER
 logger.New()
@@ -77,3 +96,8 @@ Logger: fileLogger.LogMode(logger.Info),
 &model.Comment{},
 )*/
 // model.Init()
+/////////////////////
+///////	R.LoadHTMLGlob("tmpl/*.tmpl")
+//dsn := "alaazak:0100ZakAD@tcp(127.0.0.1:3306)/alaazak_g1?charset=utf8mb4&parseTime=True&loc=Local"
+//fmt.Printf("%+v", col)
+//Childs[table]=append(Childs[table],inflection.Plural(cut))

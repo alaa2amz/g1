@@ -3,8 +3,8 @@ package post
 import (
 	"log"
 
+	h "github.com/alaa2amz/g1/helpers"
 	"github.com/alaa2amz/g1/service"
-h	"github.com/alaa2amz/g1/helpers"
 )
 
 func init() {
@@ -26,6 +26,7 @@ func init() {
 	//		DB.Migrator().DropColumn(Proto(), dropColumn)
 	//	}
 	DB.AutoMigrate(Proto())
+
 	colTypes, err := DB.Migrator().ColumnTypes(Proto())
 	if err != nil {
 		panic(err)

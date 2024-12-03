@@ -3,6 +3,7 @@ package comment
 import (
 	"log"
 
+	h "github.com/alaa2amz/g1/helpers"
 	"github.com/alaa2amz/g1/service"
 )
 
@@ -21,12 +22,23 @@ func init() {
 
 	DB = service.DB
 
-//	for _, dropColumn := range DroppedColumns {
-//		DB.Migrator().DropColumn(Proto(), dropColumn)
-//	}
+	//	for _, dropColumn := range DroppedColumns {
+	//		DB.Migrator().DropColumn(Proto(), dropColumn)
+	//	}
 	DB.AutoMigrate(Proto())
+	colTypes, err := DB.Migrator().ColumnTypes(Proto())
+	if err != nil {
+		panic(err)
+	}
+	cols := []string{}
+	for _, colType := range colTypes {
+		cols = append(cols, colType.Name())
+	}
+	TidyCols = h.TidySlice(cols, LeadCols, TrailCols)
+	log.Println("TidyCols", TrailCols)
+	log.Println("Cols", cols)
 	service.Paths[Path] = Proto()
-	service.Index = append(service.Index,Path)
+	service.Index = append(service.Index, Path)
 }
 
 func Init() {

@@ -1,6 +1,8 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 /*
 var (
@@ -11,12 +13,12 @@ var (
 // type Content comment.Comment
 type Comment struct {
 	gorm.Model
-	UserID uint
-	User User
-	PostID  *uint64 `gorm:"default:null"`
-	Post    *Post
-	Title   string  `form:"ctitle" json:"title" validate:"required"`
-	Content string  `form:"ccontent" json:"content" gorm:"not null"`
+	//UserID uint
+	//User User
+	//PostID  *uint64 `gorm:"default:null"`
+	//Post    *Post
+	Title   string `form:"ctitle" json:"title" validate:"required"`
+	Content string `form:"ccontent" json:"content" gorm:"not null"`
 }
 
 //type Tag tag.Tag

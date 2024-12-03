@@ -2,14 +2,10 @@ if [ ! -d bkb ]
 then
 mkdir bkb
 fi
-#Path=$(basename $PWD)
+
 path=$(basename $PWD)
-#path=$(echo $Path|tr '[:upper:]' '[:lower:]')
 Path=$(echo $path|awk -F"_" '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1)) substr($i,2)}} 1' OFS="")
-echo $Path
-cat <<EOF
-fsfsfs
-EOF
+oldPath=$(grep  -m1 package *.go|awk '{print $2;exit}')
 
 for i in *.go
 do
@@ -39,3 +35,21 @@ done
 
 	EOF
 } |ed model.go
+cp -vi ../../model/$oldPath.go ../../model/$path.go
+echo "1
+/^[ 	]*type
+s/type.*struct/type $Path struct/
+w
+"|ed ../../model/$path.go
+
+cp -v ../../../main.go ../../../main.go.bkb
+echo "
+1
+/component\/$oldPath
+t-
+s/$oldPath/$path/
+w
+"|ed ../../../main.go
+
+#Path=$(basename $PWD)
+#path=$(echo $Path|tr '[:upper:]' '[:lower:]')

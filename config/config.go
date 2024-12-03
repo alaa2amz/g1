@@ -1,3 +1,6 @@
 package config
 
-var JWTKey = []byte("123abc")
+const(
+	 JWTKey = "123abc"
+	MySqlDBName =""
+)

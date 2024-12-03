@@ -2,9 +2,11 @@ package login
 
 import "github.com/gin-gonic/gin"
 
+//import "github.com/alaa2amz/g1/mw"
+
 func Register(r *gin.Engine) {
 	cg := r.Group("") //common group
-	//cg.Use(login.Auth())
+	//	cg.Use(mw.Logged)
 
 	wg := cg.Group(Path) //web group
 	{
@@ -17,7 +19,7 @@ func Register(r *gin.Engine) {
 		wg.POST("/:id/update", up) //update
 		wg.POST("/:id/delete", dl) //delete
 
-		wg.POST("/:id/:path",crAs)
+		wg.POST("/:id/:path", crAs)
 	}
 
 	ag := cg.Group("/api" + Path) //api group
@@ -28,10 +30,9 @@ func Register(r *gin.Engine) {
 		ag.PUT("/:id", up)
 		ag.DELETE("/:id", dl)
 
-
-		ag.POST("/a/:assoc/*actions", cr)            //create
-		ag.POST("/aa/:assoc/:aid", cr)            //create
-		ag.POST("/aaa/:id/:assoc/:aid", cr)            //create
+		ag.POST("/a/:assoc/*actions", cr)   //create
+		ag.POST("/aa/:assoc/:aid", cr)      //create
+		ag.POST("/aaa/:id/:assoc/:aid", cr) //create
 	}
 
 }

@@ -7,7 +7,10 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/alaa2amz/g1/helpers/ajwt"
+	"github.com/alaa2amz/g1/service/model"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -16,6 +19,7 @@ type Reply struct {
 	Data       any
 	Error      error
 	Template   string
+	Redirect   string
 }
 
 type QueryTerm struct {
@@ -48,7 +52,14 @@ func Send(r *Reply, c *gin.Context) {
 		//handeling data and errors
 		c.JSON(r.StatusCode, gin.H{"data": r.Data, "error": errMsg})
 		return
+	} else if c.Request.Method != "GET" &&
+		r.Error == nil &&
+		r.Redirect != "" &&
+		!strings.Contains(c.Request.URL.Path, "/api/") &&
+		r.StatusCode >= 200 && r.StatusCode < 300 {
+		c.Redirect(303, r.Redirect)
 	} else {
+
 		//TODO:handle templates errors and unfound templates or empty templates
 		c.HTML(r.StatusCode, r.Template, gin.H{"data": r.Data, "error": errMsg})
 		return
@@ -143,7 +154,7 @@ func TidySlice(orig []string, leads, trails []string) []string {
 	return keys
 }
 
-func Cr(c *gin.Context,db *gorm.DB,f func()any) {
+func Cr(c *gin.Context, db *gorm.DB, f func() any) {
 	r := &Reply{}
 	p := f()
 
@@ -155,7 +166,6 @@ func Cr(c *gin.Context,db *gorm.DB,f func()any) {
 		Send(r, c)
 		return
 	}
-
 
 	result := db.Create(&p)
 	if result.Error != nil {
@@ -178,14 +188,57 @@ func Cr(c *gin.Context,db *gorm.DB,f func()any) {
 	}
 
 }
-func Bail(c *gin.Context, code int,err error){
+func Bail(c *gin.Context, code int, err error) {
 	if err != nil {
-		r:=&Reply{}
+		r := &Reply{}
 		r.StatusCode = code
 		r.Error = err
 		r.Template = "error.tmpl"
 		Send(r, c)
-		c.AbortWithError(code,err)
+		c.AbortWithError(code, err)
 		return
 	}
+}
+
+func UserCrPass(p *model.User) error {
+	// /---///
+	if p.Password != p.Confirm {
+
+		return fmt.Errorf("Password not confirming")
+	}
+	var err error
+	p.PH, err = bcrypt.GenerateFromPassword([]byte(p.Password), bcrypt.MinCost)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func LoginCrToken(p *model.Login, c *gin.Context, db *gorm.DB) (string, error) {
+	logUser := model.User{}
+	result := db.Where("name = ?", p.Name).First(&logUser)
+	if result.Error != nil {
+		return "", result.Error
+	}
+	p.User = logUser
+	err := bcrypt.CompareHashAndPassword(logUser.PH, []byte(p.Password))
+	if err != nil {
+		return "", err
+	}
+	token, err := ajwt.Token(ajwt.EasyClaims(p.Name, "client", 360))
+	//token,err:=ajwt.Token(ajwt.EasyClaims(p.Name+" "+fmt.Sprint(p.ID),"client",360))
+	if err != nil {
+		return "", err
+	}
+	//p.TH,err=bcrypt.GenerateFromPassword([]byte(token),bcrypt.MinCost)
+	//if err != nil {
+	//	return "",err
+	//}
+	c.SetCookie("token", token, 3600, "/", c.Request.Host, false, true)
+	//c.SetCookie("token", token, 3600, "/", "localhost", false, true)
+	c.Set("message", "logged in")
+	//c.Set("UserID",logUser.ID)
+	//c.Set("User",logUser)
+	return token, nil
+
 }
