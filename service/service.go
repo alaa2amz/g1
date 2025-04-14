@@ -6,6 +6,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/alaa2amz/g1/config"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/inflection"
 	"gorm.io/driver/mysql"
@@ -30,19 +32,9 @@ func init() {
 
 	R = gin.Default()
 
-	/*AD
-	dsn := `alaazak:0100ZakAD@tcp(mysql-alaazak.alwaysdata.net:3306)/alaazak_g1?`
-		+`charset=utf8mb4&parseTime=True`
-	*/
-
-	//sqlite
-	//DB, dberr = gorm.Open(sqlite.Open("db.sqlite?_foreign_keys=on"))
-
-	//local mysql
-	dsn := "alaazak:0100ZakAD@/alaazak_g1?charset=utf8mb4&parseTime=True"
 
 	//prepairing DB
-	DB, dberr = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	DB, dberr = gorm.Open(mysql.Open(config.DSN), &gorm.Config{})
 	if dberr != nil {
 		log.Fatal(dberr)
 	}

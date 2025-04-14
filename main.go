@@ -37,7 +37,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
-
+	
 	"github.com/alaa2amz/g1/service"
 	//"github.com/gin-contrib/static"
 	//"github.com/gin-gonic/gin"
@@ -70,6 +70,7 @@ func main() {
 	
 	service.PostMigrate()
 	
+	fmt.Printf("Childs: %+v\n",service.Childs)
 	service.R.Run()
 }
 
